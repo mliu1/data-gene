@@ -25,6 +25,6 @@ From the project root directory run: python prefill.py https://www.capitalone.co
 By default, demo will be executed in Chrome (normal mode). 
 
 # Links
-[Selenium - Python Documentation](https://selenium-python.readthedocs.io/)https://selenium-python.readthedocs.io/)
+[Selenium - Python Documentation](https://selenium-python.readthedocs.io/)
 
 [Webdriver Manager for Python](https://pypi.org/project/webdriver-manager/)
