@@ -13,21 +13,18 @@ venv (recommended)
 Download or clone the repository
 Open a terminal
 Go to the project root directory "/data-gene/".
-Create a virtual environment: py -m venv venv
-Activate the virtual environment executing the following script: .\venv\Scripts\activate
+Create a virtual environment
+Activate the virtual environment
 Execute the following command to download the necessary libraries: pip install -r requirements.txt
 
-# Test Execution
+# Demo
 Open a terminal
-From the project root directory run: pytest -v --html=results/report.html
+From the project root directory run: python prefill.py https://www.capitalone.com/credit-cards/preapprove/?landingPage=cchp
 
 # Configuration
-By default, tests will be executed in Chrome (normal mode). Preferences can be changed in "/data/config.yaml" file
-
-# Results
-To check the report, open the '/results/report.html' file once the execution has finished.
+By default, demo will be executed in Chrome (normal mode). 
 
 # Links
-Selenium - Python Documentation
+[Selenium - Python Documentation](https://selenium-python.readthedocs.io/)https://selenium-python.readthedocs.io/)
 
-Webdriver Manager for Python
+[Webdriver Manager for Python](https://pypi.org/project/webdriver-manager/)
