@@ -27,4 +27,5 @@ By default, demo will be executed in Chrome (normal mode).
 # Links
 [Selenium - Python Documentation](https://selenium-python.readthedocs.io/)  
 [Webdriver Manager for Python](https://pypi.org/project/webdriver-manager/)  
-[lxml parser](https://lxml.de/parsing.html)
+[lxml parser](https://lxml.de/parsing.html)  
+[Form filling with Selenium](https://iqss.github.io/dss-webscrape/filling-in-web-forms.html)
