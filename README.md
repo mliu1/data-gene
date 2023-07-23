@@ -17,9 +17,17 @@ Activate the virtual environment.
 Execute the following command to download the necessary libraries: pip install -r requirements.txt.  
 Download right version of chromedriver from [here](https://chromedriver.chromium.org/downloads)
 
-# Demo
+# Selenium Demo
 Open a terminal  
 From the project root directory run: python prefill.py https://www.capitalone.com/credit-cards/preapprove/?landingPage=cchp
+
+# Parsing Demo
+Open a terminal  
+From the project root directory run: python parsing.py --html ./test.html --output ./test.pickle
+
+# Matching Demo
+Open a terminal  
+From the project root directory run: python matching.py --formfields test.pickle --output form.json
 
 # Configuration
 By default, demo will be executed in Chrome (normal mode). 
