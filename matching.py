@@ -20,22 +20,22 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-input_string = """First name: Min
-MIDDLE INITIAL: NA
-Last name: Lu
-Residential address: 15481 Bristol Ridge Ter
-Address line 2: #54
-State: CA
+input_string = """First Name: Min
+Middle Initial: NA
+Last Name: Lu
+Mailing Addressline1: 15481 Bristol Ridge Ter
+Mailing Addressline2 (optional): #54
+State/Province: CA
 City: San Diego
-Zipcode: 92127
-Email address: minlu19@gmail.com
-Primary phone number: 2176399259
-Employment status: employed
-Education degree: PhD
+Zipcode/Postcode: 92127
+Email Address: minlu19@gmail.com
+Primary Phone Number: 2176399259
+Employment Status: employed
+Education Level: Doctoral Degree (Ph.D, Ed.D, M.D.)
 Income (annual): 250000
-Monthly rent/mortgage: 2500
-Date of birth (MM/DD/YYYY): 12/15/1989
-Social Security number: 326-02-2932"""
+Monthly Rent/Mortgage: 2500
+Date of Birth (MM/DD/YYYY): 12/15/1989
+Social Security Number (ssn): 316-14-4952"""
 
 # Split the string into lines
 lines = input_string.splitlines()
@@ -117,8 +117,7 @@ if __name__ == "__main__":
     result = ast.literal_eval(result_string)
     print(result)
 
-    form_name_values = []
-
+    form_name_to_pii_name = []
     for pii_name, form_name in result.items():
         
         if len(form_name) == 0:
@@ -136,9 +135,10 @@ if __name__ == "__main__":
             args = [str(form_value), pii_value]
             description_string = """Based on the query string to select the best value in the list."""
             mapped_value = ai_function(function_string, args, description_string, model)
-            form_name_values[form_name] = mapped_value
             xid, xpath = form_key_texts[form_name][(form_name, mapped_value)]
-            form_name_values.append((xid, xpath, mapped_value))
+            # logging form_name_values
+            logging.info((xid, xpath, mapped_value))
+            form_name_to_pii_name.append((xid, xpath, pii_name))
         if len(form_value) == 1:
             #check if there is format string availale 
             default_value = form_value[0]
@@ -152,13 +152,10 @@ if __name__ == "__main__":
                 mapped_value = ai_function(function_string, args, description_string, model)
             else:
                 mapped_value = pii_value
-            form_name_values.append((xid, xpath, mapped_value))
+            # logging form_name_values
+            logging.info((xid, xpath, mapped_value))
+            form_name_to_pii_name.append((xid, xpath, pii_name))
 
-    #print(form_name_values)
     with open(json_output, 'w') as json_file:
-        json.dump(form_name_values, json_file)
-    
-
-
-    
+        json.dump(form_name_to_pii_name, json_file)
     
