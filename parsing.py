@@ -97,6 +97,9 @@ def check_input_leafs(common_path, input_xpathes):
             break
     return is_one_cluster
 
+def id_tranformation(item_id):
+    return f"#{item_id}"
+
 def process_checkbox_elements(checkbox_inputs, tree):
     # Create a dictionary to store checkbox group values
     # return key value dictionary, where key is the xpath of the first element in one group
@@ -242,7 +245,8 @@ def pack_raido_group(radio_group, associated_text_path, text_group, result):
         name = ('radio group', grap_context_text(xpath, associated_text_path, text_group).strip())
         values = []
         for node in radio_nodes:
-            values.append((node.get('id'), xpath, node.label.text_content()))
+            print(node.type)
+            values.append((id_tranformation(node.get('id')), xpath, node.label.text_content(), node.type))
         result[name] = values
     return result
 
@@ -251,7 +255,8 @@ def pack_checkbox_group(checkbox_group, associated_text_path, text_group, result
         name = ('checkbox group',  grap_context_text(xpath, associated_text_path, text_group).strip())
         values = []
         for node in checkbox_nodes:
-            values.append((node.get('id'), xpath, node.label.text_content()))
+            print(node.type)
+            values.append((id_tranformation(node.get('id')), xpath, node.label.text_content(), node.type))
         result[name] = values
     return result
 
@@ -263,7 +268,7 @@ def pack_select_group(select_group, associated_text_path, text_group, result):
             # Extract option values
             values = [option.get("value") for option in option_elements]
             name = (name_prefix, node.label.text_content().strip())
-            result[name] = [(node.get('id'), xpath, values)]
+            result[name] = [(id_tranformation(node.get('id')), xpath, values, 'select:'+node.get('name'))]
     return result
 
 def pack_input_group(input_group, associated_text_path, text_group, result):
@@ -273,12 +278,13 @@ def pack_input_group(input_group, associated_text_path, text_group, result):
             if node.label is not None \
                 and node.label.text_content() is not None \
                 and len(node.label.text_content()) >= 1:
-                name = (name_prefix, node.label.text_content())
+                name = (name_prefix, node.label.text_content().strip())
             elif node.name is not None:
                 name = (name_prefix, node.name)
             elif node.get('id') is not None:
-                name = (name_prefix, node.get('id'))
-            values = [(node.get('id'), xpath, node.value)]
+                name = (name_prefix, id_tranformation(node.get('id')))
+            print(node.type)
+            values = [(id_tranformation(node.get('id')), xpath, node.value, node.type)]
             result[name] = values
 
     return result

@@ -20,21 +20,32 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+json_string = '{"First Name": "firstName", "Middle Name": "middleName", "Middle Initial": "middleName-initial", "Last Name": "lastName", "Individual Taxpayer Identification Number (itin)": "itin",\
+               "Mailing Addressline1": "mailingAddressLine1", "Mailing Addressline2 (optional)": "mailingAddressLine2", "Zipcode/Postcode": "zip/postalCode",\
+               "State/Province/Region": "state/province/region", "City": "city", "Country": "country", "Primary Phone Number": "primaryPhoneNumber", \
+               "Phone Type": "primaryPhoneType", "Employment Status":"employmentStatus", "Income(annual)": "income-annual-usd", "Housing status": "housingStatus",\
+               "Monthly Rent/Mortgage": "monthlyRent/Mortgage", "Education Degree": "educationDegree", "Working Industry": "workingIndustry", \
+               "Professional Title": "professionalTitle", "Professional Tenure":"professionalTenure", "Social Security Number (ssn)": "ssn", \
+               "Date of Birth": "dob", "Email Address": "email"}'
+
+# Convert the JSON string to a Python dictionary
+name_maps = json.loads(json_string)
+
 input_string = """First Name: Min
 Middle Initial: NA
 Last Name: Lu
 Mailing Addressline1: 15481 Bristol Ridge Ter
 Mailing Addressline2 (optional): #54
-State/Province: CA
+State/Province/Region: CA
 City: San Diego
 Zipcode/Postcode: 92127
 Email Address: minlu19@gmail.com
 Primary Phone Number: 2176399259
 Employment Status: employed
-Education Level: Doctoral Degree (Ph.D, Ed.D, M.D.)
-Income (annual): 250000
+Education Degree: Doctoral Degree (Ph.D, Ed.D, M.D.)
+Income(annual): 250000
 Monthly Rent/Mortgage: 2500
-Date of Birth (MM/DD/YYYY): 12/15/1989
+Date of Birth: 12/15/1989
 Social Security Number (ssn): 316-14-4952"""
 
 # Split the string into lines
@@ -86,13 +97,16 @@ if __name__ == "__main__":
     form_key_values = []
     form_key_texts = defaultdict(dict)
     for key, values in formfields.items():
+        if len(key[1]) < 1:
+            continue
         form_key_values.append(key[1])
         text_to_value = dict()
         for v in values:
+            print(v)
             # key[1] is the actual name / context of the input group
             # v[0], v[1] is the id and xpath of input element, 
             # v[2] is the value of the input element
-            text_to_value[(key[1], str(v[2]))] = (v[0],v[1])
+            text_to_value[(key[1], str(v[2]))] = (v[0],v[1],v[3])
 
         form_key_texts[key[1]] = text_to_value
 
@@ -111,16 +125,39 @@ if __name__ == "__main__":
     #print(pii_key_values)
     
     function_string = "def map_names(form_key_values: list, pii_key_values: list) -> dict:"
-    description_string = """Based on the semantic of list elements, build a map between of two input lists."""
+    description_string = """Based on the semantic of list elements, build a map from the first list to the second list."""
     args = [str(pii_key_values), str(form_key_values)]
     result_string = ai_function(function_string, args, description_string, model)
     result = ast.literal_eval(result_string)
     print(result)
-
+    
     form_name_to_pii_name = []
-    for pii_name, form_name in result.items():
+    
+    matched_form_fields = set(result.values())
+    for form_name in form_key_values:
+        if len(key[1]) < 1:
+            continue
+        if form_name not in matched_form_fields:
+            form_value = []
+            for (k,v) in form_key_texts[form_name]:
+                form_value.append(v)
+            if len(form_value) > 1:
+                for k, v in form_key_texts[form_name]:
+                    xid = v[0]
+                    xpath = v[1]
+                    input_type = v[2]
+                    print(input_type)
+                    form_name_to_pii_name.append((xid, xpath, 'unknown', 'na', input_type))
+            if len(form_value) == 1:
+                default_value = form_value[0]
+                xid, xpath, input_type = form_key_texts[form_name][(form_name, default_value)]
+                print(input_type)
+                form_name_to_pii_name.append((xid, xpath, 'unknown', 'na', input_type))
+
+    for pii_name_raw, form_name in result.items():
         
-        if len(form_name) == 0:
+        pii_name = name_maps[pii_name_raw]
+        if form_name is None or len(form_name) == 0:
             continue
 
         form_value = []
@@ -128,21 +165,30 @@ if __name__ == "__main__":
             form_value.append(v)
 
         print(form_value)
-        pii_value = pii_dict[pii_name]
+        pii_value = pii_dict[pii_name_raw]
 
         if len(form_value) > 1:
             function_string = "def value_select(values: list, query: str) -> str:"
             args = [str(form_value), pii_value]
             description_string = """Based on the query string to select the best value in the list."""
             mapped_value = ai_function(function_string, args, description_string, model)
-            xid, xpath = form_key_texts[form_name][(form_name, mapped_value)]
+            xid, xpath, input_type = form_key_texts[form_name][(form_name, mapped_value)]
             # logging form_name_values
             logging.info((xid, xpath, mapped_value))
-            form_name_to_pii_name.append((xid, xpath, pii_name))
+            form_name_to_pii_name.append((xid, xpath, pii_name, mapped_value))
+            for k, v in form_key_texts[form_name]:
+                if (k[0] == form_name) and (k[1] == mapped_value):
+                    continue
+                xid = v[0]
+                xpath = v[1]
+                input_type = v[2]
+                print(input_type)
+                form_name_to_pii_name.append((xid, xpath, 'unselected', 'na', input_type))
+
         if len(form_value) == 1:
             #check if there is format string availale 
             default_value = form_value[0]
-            xid, xpath = form_key_texts[form_name][(form_name, default_value)]
+            xid, xpath, input_type = form_key_texts[form_name][(form_name, default_value)]
             mapped_value = ''
             if len(default_value) > 1:
                 function_string = "def value_norm(format: str, value: str) -> str:"
@@ -154,7 +200,7 @@ if __name__ == "__main__":
                 mapped_value = pii_value
             # logging form_name_values
             logging.info((xid, xpath, mapped_value))
-            form_name_to_pii_name.append((xid, xpath, pii_name))
+            form_name_to_pii_name.append((xid, xpath, pii_name, mapped_value, input_type))
 
     with open(json_output, 'w') as json_file:
         json.dump(form_name_to_pii_name, json_file)
