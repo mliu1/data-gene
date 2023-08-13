@@ -1,4 +1,5 @@
 from lxml import html
+import argparse
 import requests
 
 def add_html_tag_if_missing(html_snippet):
@@ -21,7 +22,11 @@ def save_html_to_file(html_content, file_path):
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(html_content)
 
-hash_string = "https://secure05ea.chase.com/web/oao/application/card?8226a1d4232c94f307cafda8faa2f7dbb40402c341ad19d08c8444d15eb42b6f7a1aebedca809fd6de75d518d8490ccd598ef6bd42a15af1ab0f83f02202fae3"
+parser = argparse.ArgumentParser(description="Download HTML content by hash.")
+parser.add_argument("--hash", type=str, help="The hash string used in the URL.")
+args = parser.parse_args()
+
+hash_string = args.hash
 url = 'https://form-fill-mongodb.vercel.app/api/html/find?hash='+hash_string
 response = requests.get(url)
 

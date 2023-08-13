@@ -145,7 +145,7 @@ if __name__ == "__main__":
                 for k, v in form_key_texts[form_name]:
                     xid = v[0]
                     xpath = v[1]
-                    input_type = v[2]
+                    input_type = v[2] if len(v) > 2 else 'unknown'
                     print(input_type)
                     form_name_to_pii_name.append((xid, xpath, 'unknown', 'na', input_type))
             if len(form_value) == 1:

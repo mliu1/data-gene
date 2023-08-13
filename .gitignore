@@ -1,0 +1,5 @@
+*.local
+__pycache__
+form.json
+output.html
+output.pickle
