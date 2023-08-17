@@ -20,16 +20,49 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-json_string = '{"First Name": "firstName", "Middle Name": "middleName", "Middle Initial": "middleName-initial", "Last Name": "lastName", "Individual Taxpayer Identification Number (itin)": "itin",\
-               "Mailing Addressline1": "mailingAddressLine1", "Mailing Addressline2 (optional)": "mailingAddressLine2", "Zipcode/Postcode": "zip/postalCode",\
-               "State/Province/Region": "state/province/region", "City": "city", "Country": "country", "Primary Phone Number": "primaryPhoneNumber", \
-               "Phone Type": "primaryPhoneType", "Employment Status":"employmentStatus", "Income(annual)": "income-annual-usd", "Housing status": "housingStatus",\
-               "Monthly Rent/Mortgage": "monthlyRent/Mortgage", "Education Degree": "educationDegree", "Working Industry": "workingIndustry", \
-               "Professional Title": "professionalTitle", "Professional Tenure":"professionalTenure", "Social Security Number (ssn)": "ssn", \
-               "Date of Birth": "dob", "Email Address": "email"}'
+# json_string = '{"First Name": "firstName", "Middle Name": "middleName", "Middle Initial": "middleName-initial", "Last Name": "lastName", "Individual Taxpayer Identification Number (itin)": "itin",\
+#                "Mailing Addressline1": "mailingAddressLine1", "Mailing Addressline2 (optional)": "mailingAddressLine2", "Zipcode/Postcode": "zip/postalCode",\
+#                "State/Province/Region": "state/province/region", "City": "city", "Country": "country", "Primary Phone Number": "primaryPhoneNumber", \
+#                "Phone Type": "primaryPhoneType", "Employment Status":"employmentStatus", "Income(annual)": "income-annual-usd", "Housing Status": "housingStatus",\
+#                "Monthly Rent/Mortgage": "monthlyRent/Mortgage", "Education Degree": "educationDegree", "Working Industry": "workingIndustry", \
+#                "Professional Title": "professionalTitle", "Professional Tenure":"professionalTenure", "Social Security Number (ssn)": "ssn", \
+#                "Date of Birth": "dob", "Email Address": "email"}'
+
+
+json_string = '''{
+  "First Name": "firstName",
+  "Middle Name": "middleName",
+  "Middle Initial": "middleName-initial",
+  "Last Name": "lastName",
+  "Suffix": "suffix",
+  "Tax ID Type": "taxIDType",
+  "Individual Taxpayer Identification Number (itin)": "itin",
+  "Social Security Number (ssn)": "ssn",
+  "Date of Birth (mm/dd/yyyy)": "dob-mm/dd/yyyy",
+  "Mother's Maiden Name": "mothersMaidenName",
+  "Address Type": "addressType",
+  "Mailing Addressline1": "mailingAddressLine1",
+  "Mailing Addressline2 (optional)": "mailingAddressLine2",
+  "Zipcode/Postcode": "zip/postalCode",
+  "State/Province/Region": "state/province/region",
+  "City": "city",
+  "Country": "country",
+  "Primary Phone Type": "primaryPhoneType",
+  "Primary Phone Number": "primaryPhoneNumber",
+  "Email Address": "email",
+  "Employment Status": "employmentStatus",
+  "Income(annual)": "income-annual-usd",
+  "Type of residence/Housing Status": "housingStatus",
+  "Monthly Rent/Mortgage": "monthlyRent/Mortgage",
+  "Education Degree": "educationDegree",
+  "Working Industry": "workingIndustry",
+  "Professional Title": "professionalTitle",
+  "Professional Tenure": "professionalTenure"
+}'''
 
 # Convert the JSON string to a Python dictionary
 name_maps = json.loads(json_string)
+
 
 input_string = """First Name: Min
 Middle Initial: NA
@@ -45,8 +78,51 @@ Employment Status: employed
 Education Degree: Doctoral Degree (Ph.D, Ed.D, M.D.)
 Income(annual): 250000
 Monthly Rent/Mortgage: 2500
-Date of Birth: 12/15/1989
-Social Security Number (ssn): 316-14-4952"""
+Date of Birth (mm/dd/yyyy): 12/15/1989
+Social Security Number (ssn): 316-14-4952
+Middle Name: NA
+Suffix: None
+Tax ID Type: SOCIAL_SECURITY_NUMBER
+Individual Taxpayer Identification Number (itin): 316-88-8888
+Country: USA
+Primary Phone Type: CELL
+Type of residence/Housing Status: OWN
+Working Industry: Tech
+Professional Title: Engineer
+Professional Tenure: 10 Years
+Address Type: DOMESTIC
+Mother's Maiden Name: A"""
+
+
+# input_string = """First Name: Xin
+# Middle Name: X
+# Last Name: Xu
+# Suffix: None
+# Tax ID Type: SSN
+# Individual Taxpayer Identification Number (itin): 316-14-8882
+# Social Security Number (ssn): 316-14-8882
+# Date of Birth (mm/dd/yyyy): 12/15/1989
+# Mother's Maiden Name: A
+# Address Type: DOMESTIC
+# Mailing Addressline1: 15469 Bristol Ridge Ter
+# Mailing Addressline2: #58
+# Zipcode/Postcode: 92122
+# State/Province/Region: CA
+# City: San Diego
+# Country: USA
+# Primary Phone Type: CELL
+# Primary Phone Number: 2176399999
+# Email Address: minlu8@gmail.com
+# Employment Status: Employed
+# Income(annual): 250000
+# Type of residence/Housing Status: OWN
+# Monthly Rent/Mortgage: 2500
+# Education Degree: Doctoral Degree (Ph.D, Ed.D, M.D.)
+# Working Industry: Tech
+# Professional Title: Engineer
+# Professional Tenure: 10 Years
+# """
+
 
 # Split the string into lines
 lines = input_string.splitlines()
@@ -61,6 +137,8 @@ for line in lines:
 piikeys = pii_dict.keys()
 piistr = str(pii_dict)
 
+print(piistr)
+
 
 def ai_function(function, args, description, model = "gpt-4"):
     # parse args to comma separated string
@@ -73,7 +151,11 @@ def ai_function(function, args, description, model = "gpt-4"):
         temperature=0
     )
 
-    return response.choices[0].message["content"]
+    # return response.choices[0].message["content"]
+    response_content = response.choices[0].message["content"]
+    # Ensure that the content is formatted correctly
+    response_content = response_content.replace("{", "{'").replace(": '", "': '").replace("',", "',").replace("'}", "'}")
+    return response_content
 
 
 
@@ -81,7 +163,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Matching pii data to extracted form fields.")
     #parser.add_argument("--pii", type=str, help="The pii data json file.")
     parser.add_argument("--formfields", type=str, help="The extraced form fields pickle file.")
-    parser.add_argument("--output", type=str, help="The filled information for #id/#xapth of input elements, in json format.")
+    parser.add_argument("--output", type=str, help="The filled information for #id/#xpath of input elements, in json format.")
 
 
     args = parser.parse_args()
@@ -90,7 +172,7 @@ if __name__ == "__main__":
     
     formfields = deserialize_dictionary(args.formfields)
     json_output = args.output
-    openai.api_key = os.environ["OPENAI_API_KEY"]
+    openai.api_key = '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'
 
     model = "gpt-3.5-turbo"
     
@@ -128,6 +210,8 @@ if __name__ == "__main__":
     description_string = """Based on the semantic of list elements, build a map from the first list to the second list."""
     args = [str(pii_key_values), str(form_key_values)]
     result_string = ai_function(function_string, args, description_string, model)
+    result_string = result_string.replace("''", "'")  # Fix the format of keys
+    logging.info(result_string)
     result = ast.literal_eval(result_string)
     print(result)
     
@@ -156,7 +240,12 @@ if __name__ == "__main__":
 
     for pii_name_raw, form_name in result.items():
         
-        pii_name = name_maps[pii_name_raw]
+        if pii_name_raw in name_maps:
+            pii_name = name_maps[pii_name_raw]
+        else:
+            logging.warning(f"Key not found in name_maps: {pii_name_raw}")
+            continue
+        
         if form_name is None or len(form_name) == 0:
             continue
 
