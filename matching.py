@@ -166,7 +166,7 @@ if __name__ == "__main__":
     
     formfields = deserialize_dictionary(args.formfields)
     json_output = args.output
-    openai.api_key = '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'
+    openai.api_key = os.environ["OPENAI_API_KEY"]
 
     model = "gpt-3.5-turbo"
     
