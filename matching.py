@@ -39,7 +39,7 @@ json_string = '''{
   "Individual Taxpayer Identification Number (itin)": "itin",
   "Social Security Number (ssn)": "ssn",
   "Date of Birth (mm/dd/yyyy)": "dob-mm/dd/yyyy",
-  "Mother's Maiden Name": "mothersMaidenName",
+  "Mother Maiden Name": "motherMaidenName",
   "Address Type": "addressType",
   "Mailing Addressline1": "mailingAddressLine1",
   "Mailing Addressline2 (optional)": "mailingAddressLine2",
@@ -91,7 +91,7 @@ Working Industry: Tech
 Professional Title: Engineer
 Professional Tenure: 10 Years
 Address Type: DOMESTIC
-Mother's Maiden Name: A"""
+Mother Maiden Name: A"""
 
 
 # input_string = """First Name: Xin
@@ -151,13 +151,7 @@ def ai_function(function, args, description, model = "gpt-4"):
         temperature=0
     )
 
-    # return response.choices[0].message["content"]
-    response_content = response.choices[0].message["content"]
-    # Ensure that the content is formatted correctly
-    response_content = response_content.replace("{", "{'").replace(": '", "': '").replace("',", "',").replace("'}", "'}")
-    return response_content
-
-
+    return response.choices[0].message["content"]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Matching pii data to extracted form fields.")
@@ -210,7 +204,6 @@ if __name__ == "__main__":
     description_string = """Based on the semantic of list elements, build a map from the first list to the second list."""
     args = [str(pii_key_values), str(form_key_values)]
     result_string = ai_function(function_string, args, description_string, model)
-    result_string = result_string.replace("''", "'")  # Fix the format of keys
     logging.info(result_string)
     result = ast.literal_eval(result_string)
     print(result)
@@ -245,7 +238,7 @@ if __name__ == "__main__":
         else:
             logging.warning(f"Key not found in name_maps: {pii_name_raw}")
             continue
-        
+
         if form_name is None or len(form_name) == 0:
             continue
 
