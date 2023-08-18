@@ -246,7 +246,11 @@ def pack_raido_group(radio_group, associated_text_path, text_group, result):
         values = []
         for node in radio_nodes:
             print(node.type)
-            values.append((id_tranformation(node.get('id')), xpath, node.label.text_content(), node.type))
+            if node and node.label and node.label.text_content():
+                label_text = node.label.text_content().strip()
+            else:
+                label_text = ''
+            values.append((id_tranformation(node.get('id')), xpath, label_text, node.type))
         result[name] = values
     return result
 
@@ -267,7 +271,11 @@ def pack_select_group(select_group, associated_text_path, text_group, result):
             option_elements = node.xpath(".//option")
             # Extract option values
             values = [option.get("value") for option in option_elements]
-            name = (name_prefix, node.label.text_content().strip())
+            if node and node.label and node.label.text_content():
+                label_text = node.label.text_content().strip()
+            else:
+                label_text = ''
+            name = (name_prefix, label_text)
             result[name] = [(id_tranformation(node.get('id')), xpath, values, 'select:'+node.get('name'))]
     return result
 

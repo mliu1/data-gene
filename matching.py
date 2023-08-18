@@ -57,7 +57,10 @@ json_string = '''{
   "Education Degree": "educationDegree",
   "Working Industry": "workingIndustry",
   "Professional Title": "professionalTitle",
-  "Professional Tenure": "professionalTenure"
+  "Professional Tenure": "professionalTenure",
+  "Linkedin Profile": "linkedinProfile",
+  "Personal Website": "personalWebsite",
+  "Visa Sponsorship": "visaSponsorship"
 }'''
 
 # Convert the JSON string to a Python dictionary
@@ -91,7 +94,10 @@ Working Industry: Tech
 Professional Title: Engineer
 Professional Tenure: 10 Years
 Address Type: DOMESTIC
-Mother Maiden Name: A"""
+Mother Maiden Name: A
+Linkedin Profile: https://www.linkedin.com/in/abc/
+Personal Website: https://www.abc.com
+Visa Sponsorship: NO"""
 
 
 # input_string = """First Name: Xin
