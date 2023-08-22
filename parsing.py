@@ -177,6 +177,7 @@ def process_text_elements(text_elements, tree):
     isFirst = True
     preXpath = ''
     for input_elem in text_elements:
+        print(etree.tostring(input_elem, pretty_print=True).decode('utf-8'))
         xpath_expression = tree.getpath(input_elem)
         if isFirst:
             preXpath = xpath_expression
@@ -296,10 +297,35 @@ def pack_input_group(input_group, associated_text_path, text_group, result):
             result[name] = values
 
     return result
-    
+
+def preprocess_parent_labels(labels):
+    #//label[input or select]
+    for label in labels:
+        # Find the first input or select element inside the label
+        child_elements = label.findall('./input')
+        select_elements = label.findall('./select')
+        if len(select_elements) > 0:
+            child_elements = child_elements + select_elements
+        # If the element is found and doesn't have an id, generate one
+        for child_element in child_elements:
+            if child_element.get('type') == 'hidden':
+                continue
+            if child_element.get('id') is None:
+                # Generate a unique ID for the element
+                element_id = f"element_{id(child_element)}"
+                child_element.set('id', element_id) 
+            # Set the 'for' attribute of the label to match the element's id
+            element_id = child_element.get('id')   
+            label.set('for', element_id)
+
+
 def parsing_page(page):
     #checkbox elements
     tree = etree.ElementTree(page)
+
+    #Find all normal input elements
+    labels = tree.xpath("//label[input or select]")
+    preprocess_parent_labels(labels)
 
     # Find all checkbox input elements
     checkbox_inputs = tree.xpath("//input[@type='checkbox']")

@@ -251,7 +251,9 @@ if __name__ == "__main__":
         form_value = []
         for (k,v) in form_key_texts[form_name]:
             form_value.append(v)
-
+        print(pii_name_raw)
+        print(pii_name)
+        print(form_name)
         print(form_value)
         pii_value = pii_dict[pii_name_raw]
 
@@ -286,6 +288,12 @@ if __name__ == "__main__":
                 mapped_value = ai_function(function_string, args, description_string, model)
             else:
                 mapped_value = pii_value
+            # logging form_name_values
+            logging.info((xid, xpath, mapped_value))
+            form_name_to_pii_name.append((xid, xpath, pii_name, mapped_value, input_type))
+
+        if len(form_value) == 0:
+            mapped_value = pii_value
             # logging form_name_values
             logging.info((xid, xpath, mapped_value))
             form_name_to_pii_name.append((xid, xpath, pii_name, mapped_value, input_type))
