@@ -9,10 +9,10 @@ from collections import defaultdict
 from langchain.llms import OpenAI
 import tiktoken
 import openai
+import numpy as np
 from langchain import PromptTemplate
 from parsing import deserialize_dictionary
 import ast
-
 
 # Configure logging
 logging.basicConfig(
@@ -213,7 +213,27 @@ if __name__ == "__main__":
     logging.info(result_string)
     result = ast.literal_eval(result_string)
     print(result)
-    
+    filtered_result = {}
+    for pii_name_raw, form_name in result.items():
+        if len(form_name) == 0:
+            continue
+        print(pii_name_raw)
+        print(form_name)
+        # Compute the cosine similarity
+        resp = openai.Embedding.create(
+            input=[pii_name_raw, form_name],
+            engine="text-similarity-davinci-001")
+
+        embedding_a = resp['data'][0]['embedding']
+        embedding_b = resp['data'][1]['embedding']
+
+        similarity = np.dot(embedding_a, embedding_b)
+        #similarity = nlp(pii_name_raw).similarity(nlp(form_name))
+        print(similarity)
+        if similarity >=.6:
+            filtered_result[pii_name_raw] = form_name
+    result = filtered_result
+
     form_name_to_pii_name = []
     
     matched_form_fields = set(result.values())
