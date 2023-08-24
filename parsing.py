@@ -292,7 +292,9 @@ def pack_input_group(input_group, associated_text_path, text_group, result):
                 name = (name_prefix, node.name)
             elif node.get('id') is not None:
                 name = (name_prefix, id_tranformation(node.get('id')))
-            print(node.type)
+            else:
+                name = (name_prefix, node.get('aria-labelledby'))
+            #print(etree.tostring(node))
             values = [(id_tranformation(node.get('id')), xpath, node.value, node.type)]
             result[name] = values
 
