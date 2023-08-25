@@ -159,23 +159,8 @@ def ai_function(function, args, description, model = "gpt-4"):
 
     return response.choices[0].message["content"]
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Matching pii data to extracted form fields.")
-    #parser.add_argument("--pii", type=str, help="The pii data json file.")
-    parser.add_argument("--formfields", type=str, help="The extraced form fields pickle file.")
-    parser.add_argument("--output", type=str, help="The filled information for #id/#xpath of input elements, in json format.")
-
-
-    args = parser.parse_args()
-    
-    #pii = deserialize_dictionary(args.pii)
-    
-    formfields = deserialize_dictionary(args.formfields)
-    json_output = args.output
-    openai.api_key = os.environ["OPENAI_API_KEY"]
-
-    model = "gpt-3.5-turbo"
-    
+def matching(formfields, openai_api_key, model = "gpt-3.5-turbo"):
+    openai.api_key = openai_api_key
     form_key_values = []
     form_key_texts = defaultdict(dict)
     for key, values in formfields.items():
@@ -317,7 +302,26 @@ if __name__ == "__main__":
             # logging form_name_values
             logging.info((xid, xpath, mapped_value))
             form_name_to_pii_name.append((xid, xpath, pii_name, mapped_value, input_type))
+    return form_name_to_pii_name
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Matching pii data to extracted form fields.")
+    #parser.add_argument("--pii", type=str, help="The pii data json file.")
+    parser.add_argument("--formfields", type=str, help="The extraced form fields pickle file.")
+    parser.add_argument("--output", type=str, help="The filled information for #id/#xpath of input elements, in json format.")
+
+
+    args = parser.parse_args()
+    
+    #pii = deserialize_dictionary(args.pii)
+    
+    formfields = deserialize_dictionary(args.formfields)
+    json_output = args.output
+    openai_api_key = os.environ["OPENAI_API_KEY"]
+
+    model = "gpt-3.5-turbo"
+    form_name_to_pii_name = matching(formfields, openai_api_key, model)
+    
     with open(json_output, 'w') as json_file:
         json.dump(form_name_to_pii_name, json_file)
     
