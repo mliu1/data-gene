@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-from lib_data_gene.download import fetch_html_content
+from .download import fetch_html_content
 
 params = st.experimental_get_query_params()
 hash_string = params['hash']
