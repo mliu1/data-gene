@@ -6,13 +6,13 @@ import time
 import json
 import logging
 from collections import defaultdict
-from langchain.llms import OpenAI
-import tiktoken
+#from langchain.llms import OpenAI
+#import tiktoken
 import openai
 import numpy as np
-from langchain import PromptTemplate
-from parsing import deserialize_dictionary
+from .parsing import deserialize_dictionary  #TODO: fix the module import from parsing.py
 import ast
+
 
 # Configure logging
 logging.basicConfig(
