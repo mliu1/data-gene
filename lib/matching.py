@@ -164,7 +164,7 @@ def matching(formfields, openai_api_key, model = "gpt-3.5-turbo"):
     form_key_values = []
     form_key_texts = defaultdict(dict)
     for key, values in formfields.items():
-        if len(key[1]) < 1:
+        if (key[1] is None) or (len(key[1]) < 1):
             continue
         form_key_values.append(key[1])
         text_to_value = dict()
@@ -223,7 +223,7 @@ def matching(formfields, openai_api_key, model = "gpt-3.5-turbo"):
     
     matched_form_fields = set(result.values())
     for form_name in form_key_values:
-        if len(key[1]) < 1:
+        if len(form_name) < 1:
             continue
         if form_name not in matched_form_fields:
             form_value = []
@@ -250,9 +250,6 @@ def matching(formfields, openai_api_key, model = "gpt-3.5-turbo"):
             logging.warning(f"Key not found in name_maps: {pii_name_raw}")
             continue
 
-        if form_name is None or len(form_name) == 0:
-            continue
-
         form_value = []
         for (k,v) in form_key_texts[form_name]:
             form_value.append(v)
@@ -267,10 +264,13 @@ def matching(formfields, openai_api_key, model = "gpt-3.5-turbo"):
             args = [str(form_value), pii_value]
             description_string = """Based on the query string to select the best value in the list."""
             mapped_value = ai_function(function_string, args, description_string, model)
-            xid, xpath, input_type = form_key_texts[form_name][(form_name, mapped_value)]
-            # logging form_name_values
-            logging.info((xid, xpath, mapped_value))
-            form_name_to_pii_name.append((xid, xpath, pii_name, mapped_value))
+            if (form_name, mapped_value) in form_key_texts[form_name]:
+                xid, xpath, input_type = form_key_texts[form_name][(form_name, mapped_value)]
+                # logging form_name_values
+                logging.info((xid, xpath, mapped_value))
+                form_name_to_pii_name.append((xid, xpath, pii_name, mapped_value))
+            else:
+                logging.warning(f"Key not found in form key texts map: {(form_name, mapped_value)}")
             for k, v in form_key_texts[form_name]:
                 if (k[0] == form_name) and (k[1] == mapped_value):
                     continue
