@@ -10,7 +10,7 @@ from collections import defaultdict
 #import tiktoken
 import openai
 import numpy as np
-from .parsing import deserialize_dictionary  #TODO: fix the module import from parsing.py
+from parsing import deserialize_dictionary  #TODO: fix the module import from parsing.py
 import ast
 
 
