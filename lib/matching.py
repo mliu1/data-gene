@@ -200,7 +200,7 @@ def matching(formfields, openai_api_key, model = "gpt-3.5-turbo"):
     print(result)
     filtered_result = {}
     for pii_name_raw, form_name in result.items():
-        if len(form_name) == 0:
+        if (form_name is None) or (len(form_name) == 0):
             continue
         print(pii_name_raw)
         print(form_name)
@@ -262,7 +262,7 @@ def matching(formfields, openai_api_key, model = "gpt-3.5-turbo"):
         if len(form_value) > 1:
             function_string = "def value_select(values: list, query: str) -> str:"
             args = [str(form_value), pii_value]
-            description_string = """Based on the query string to select the best value in the list."""
+            description_string = """Based on the query string to select the best value in the list. Please output the whole result, no abbreviation"""
             mapped_value = ai_function(function_string, args, description_string, model)
             if (form_name, mapped_value) in form_key_texts[form_name]:
                 xid, xpath, input_type = form_key_texts[form_name][(form_name, mapped_value)]

@@ -22,6 +22,16 @@ def save_html_to_file(html_content, file_path):
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(html_content)
 
+def fetch_hashes(url):
+    response = requests.get(url)
+    content = ""
+    if response.status_code == 200:
+        data = response.json()
+        content = data
+    else:
+        print("Failed to retrieve data. Status code:", response.status_code)
+    return content
+    
 def fetch_html_content(url_base, hash_string):
     url = url_base + hash_string
     response = requests.get(url)

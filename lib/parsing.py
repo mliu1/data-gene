@@ -177,7 +177,7 @@ def process_text_elements(text_elements, tree):
     isFirst = True
     preXpath = ''
     for input_elem in text_elements:
-        print(etree.tostring(input_elem, pretty_print=True).decode('utf-8'))
+        #print(etree.tostring(input_elem, pretty_print=True).decode('utf-8'))
         xpath_expression = tree.getpath(input_elem)
         if isFirst:
             preXpath = xpath_expression
@@ -239,6 +239,7 @@ def grap_context_text(xpath, associated_text_path, text_group):
         for node in text_nodes:
             context_text.append(node.text_content())
         context = ' '.join(context_text)
+        context = context.replace('\n', '').replace('\r', '')
     return context
 
 def pack_raido_group(radio_group, associated_text_path, text_group, result):
@@ -246,11 +247,12 @@ def pack_raido_group(radio_group, associated_text_path, text_group, result):
         name = ('radio group', grap_context_text(xpath, associated_text_path, text_group).strip())
         values = []
         for node in radio_nodes:
-            print(node.type)
+            #print(node.type)
             if node and node.label and node.label.text_content():
                 label_text = node.label.text_content().strip()
             else:
                 label_text = ''
+            label_text = label_text.replace('\n', '').replace('\r', '')
             values.append((id_tranformation(node.get('id')), xpath, label_text, node.type))
         result[name] = values
     return result
@@ -260,8 +262,11 @@ def pack_checkbox_group(checkbox_group, associated_text_path, text_group, result
         name = ('checkbox group',  grap_context_text(xpath, associated_text_path, text_group).strip())
         values = []
         for node in checkbox_nodes:
-            print(node.type)
-            values.append((id_tranformation(node.get('id')), xpath, node.label.text_content(), node.type))
+            #print(node.type)
+            label_text = ""
+            if node.label:
+                label_text = node.label.text_content().replace('\n', '').replace('\r', '')
+            values.append((id_tranformation(node.get('id')), xpath, label_text, node.type))
         result[name] = values
     return result
 
@@ -276,8 +281,12 @@ def pack_select_group(select_group, associated_text_path, text_group, result):
                 label_text = node.label.text_content().strip()
             else:
                 label_text = ''
+            label_text = label_text.replace('\n', '').replace('\r', '')
             name = (name_prefix, label_text)
-            result[name] = [(id_tranformation(node.get('id')), xpath, values, 'select:'+node.get('name'))]
+            node_name = ""
+            if node.get('name'):
+                node_name = node.get('name')
+            result[name] = [(id_tranformation(node.get('id')), xpath, values, 'select:'+ node_name)]
     return result
 
 def pack_input_group(input_group, associated_text_path, text_group, result):
