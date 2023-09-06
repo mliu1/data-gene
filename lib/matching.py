@@ -10,7 +10,8 @@ from collections import defaultdict
 #import tiktoken
 import openai
 import numpy as np
-from parsing import deserialize_dictionary  #TODO: fix the module import from parsing.py
+from .utils import deserialize_dictionary  #TODO: fix the module import from parsing.py
+from .utils import load_json_from_file
 import ast
 
 
@@ -146,6 +147,17 @@ piistr = str(pii_dict)
 print(piistr)
 
 
+def classifier_function(item, targets, model = "gpt-4"):
+    messages = [{"role": "user", "content": f"You are now acting like classifier from a object specified by ```{item}``` on to one of predefined list specified in: ```{targets}```, meaning the response should be one of the element in ```{targets}```.\n\n Only respond with your `return` value. Do not include any other explanatory text in your response."}]
+
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=messages,
+        temperature=0
+    )
+
+    return response.choices[0].message["content"]
+
 def ai_function(function, args, description, model = "gpt-4"):
     # parse args to comma separated string
     args = ", ".join(args)
@@ -159,6 +171,108 @@ def ai_function(function, args, description, model = "gpt-4"):
 
     return response.choices[0].message["content"]
 
+def cosine_similarity_matrix(embeddings1, embeddings2):
+    # Normalize the embeddings
+    embeddings1_normalized = embeddings1 / np.linalg.norm(embeddings1, axis=1, keepdims=True)
+    embeddings2_normalized = embeddings2 / np.linalg.norm(embeddings2, axis=1, keepdims=True)
+    
+    # Compute the similarity matrix
+    similarity = np.dot(embeddings1_normalized, embeddings2_normalized.T)
+    
+    return similarity
+
+def matching_simple(formfields, openai_api_key, model = "gpt-3.5-turbo"):
+    openai.api_key = openai_api_key
+    
+    pii_names = []
+    for readable_name, machine_name in name_maps.items():
+        pii_names.append(readable_name)
+
+    resp = openai.Embedding.create(
+                input=pii_names,
+                engine="text-embedding-ada-002")
+      
+    pii_name_embedding_array_2d = []
+    for i in range(len(pii_names)):
+        pii_name_embedding_array_2d.append(resp['data'][i]['embedding'])
+    pii_name_embedding_array_2d = np.vstack(pii_name_embedding_array_2d)
+
+    form_names = []
+    for element in formfields:
+        form_name = ""
+        if 'name' in element:
+            form_name = form_name + ' ' + element['name']
+        elif 'label' in element:
+            form_name = form_name + ' ' + element['label']
+        elif 'context' in element:
+            form_name = form_name + ' ' + element['context']
+        if len(form_name) < 1:
+            continue
+        form_names.append(form_name)
+
+    resp = openai.Embedding.create(
+            input=form_names,
+            engine="text-embedding-ada-002")
+
+    form_name_embedding_array_2d = []
+    for i in range(len(form_names)):
+        form_name_embedding_array_2d.append(resp['data'][i]['embedding'])
+    form_name_embedding_array_2d = np.vstack(form_name_embedding_array_2d)
+
+    simmatrix = cosine_similarity_matrix(pii_name_embedding_array_2d, form_name_embedding_array_2d)
+    
+    form_name_candidates = {}
+    for ind, form_name in enumerate(form_names):
+        dot_products = simmatrix[:,ind]
+        max_index = np.argmax(dot_products)
+        max_similarity = dot_products[max_index]
+        top_k_indices = np.argsort(dot_products)[-5:]
+        candidates = []
+        for index in top_k_indices:
+            pii_name = pii_names[index]
+            similarity = dot_products[index]
+            if similarity > .6 and similarity > max_similarity - .05:
+                candidates.append(pii_name)
+        #verify the match with classification
+        form_name_candidates[form_name] = candidates
+    
+    form_name_to_pii_name = []
+    for element in formfields:
+        form_name = ""
+        machine_name = "no match"
+        sub_dict = ""
+        if 'name' in element:
+            form_name = form_name + ' ' + element['name']
+            sub_dict = element['name']
+        elif 'label' in element:
+            form_name = form_name + ' ' + element['label']
+        elif 'context' in element:
+            form_name = form_name + ' ' + element['context']
+        if len(form_name) >= 1:
+            #print('\n\n')
+            #print(form_name)
+            sub_dict = sub_dict + ' ' +element['label'] + ' ' + element['context']
+            candidates = form_name_candidates[form_name]
+            result = classifier_function(sub_dict, candidates,  "gpt-3.5-turbo")
+            element['matched'] = result
+            if result in name_maps:
+                machine_name = name_maps[result]
+            else:
+                logging.warning(f"Key not found in name_maps: {result}")
+            #print(candidates)
+            #print(result)
+        xid = ''
+        if 'id' in element:
+            xid = '#'+element['id']
+        xpath = element['xpath']
+        input_type = 'NA'
+        if 'type' in element:
+            input_type = element['type']
+        pii_name = machine_name
+        mapped_value = 'N/A'
+        form_name_to_pii_name.append((xid, xpath, pii_name, mapped_value, input_type))
+    return form_name_to_pii_name
+    
 def matching(formfields, openai_api_key, model = "gpt-3.5-turbo"):
     openai.api_key = openai_api_key
     form_key_values = []
@@ -306,22 +420,31 @@ def matching(formfields, openai_api_key, model = "gpt-3.5-turbo"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Matching pii data to extracted form fields.")
-    #parser.add_argument("--pii", type=str, help="The pii data json file.")
+    parser.add_argument("--method", type=str, default="simple", help="The pii data json file.")
     parser.add_argument("--formfields", type=str, help="The extraced form fields pickle file.")
     parser.add_argument("--output", type=str, help="The filled information for #id/#xpath of input elements, in json format.")
 
 
     args = parser.parse_args()
     
-    #pii = deserialize_dictionary(args.pii)
+    if args.method == 'simple':
+        formfields = load_json_from_file(args.formfields)
+        openai_api_key = os.environ["OPENAI_API_KEY"]
+        json_output = args.output
+        model = "gpt-3.5-turbo"
+        form_name_to_pii_name = matching_simple(formfields, openai_api_key, model)
+        with open(json_output, 'w') as json_file:
+            json.dump(form_name_to_pii_name, json_file)
     
-    formfields = deserialize_dictionary(args.formfields)
-    json_output = args.output
-    openai_api_key = os.environ["OPENAI_API_KEY"]
-
-    model = "gpt-3.5-turbo"
-    form_name_to_pii_name = matching(formfields, openai_api_key, model)
+    else:
     
-    with open(json_output, 'w') as json_file:
-        json.dump(form_name_to_pii_name, json_file)
+        formfields = deserialize_dictionary(args.formfields)
+        openai_api_key = os.environ["OPENAI_API_KEY"]
+        json_output = args.output
+        
+        model = "gpt-3.5-turbo"
+        form_name_to_pii_name = matching(formfields, openai_api_key, model)
+        
+        with open(json_output, 'w') as json_file:
+            json.dump(form_name_to_pii_name, json_file)
     

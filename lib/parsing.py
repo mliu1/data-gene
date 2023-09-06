@@ -11,28 +11,25 @@ from lxml import etree, html
 from json import loads, dumps
 from ast import literal_eval
 import pickle
-
+from .utils import serialize_dictionary
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+def print_elements(element, indent=0):
+    # Print the current element's tag name and attributes
+    print(' ' * indent + element.tag + " " + str(element.attrib))
+    
+    # Recursively print child elements
+    for child in element:
+        print_elements(child, indent + 2)
+
 def load_html(file_path):
     with open(file_path, 'r') as file:
         html_content = file.read()
     return html_content
-
-def serialize_dictionary(dictionary, file_path):
-    pickle.dump(dictionary, open(file_path,'wb'))
-    #with open(file_path, 'w') as file:
-    #    json.dump(dictionary, file)
-
-def deserialize_dictionary(file_path):
-    dictionary = pickle.load(open(file_path,'rb'))
-    #with open(file_path, 'r') as file:
-    #    dictionary = json.load(file)
-    return dictionary
 
 def is_same_pattern(xpath1, xpath2):
     #check if two xpathes are the same pattern, like following example 
@@ -395,25 +392,82 @@ def parsing_page(page):
     return result
     
 
+def print_input_with_context(parsed_html):
+    # Find all <input> elements
+    input_elements = parsed_html.xpath("//input[not(@type='hidden')]")
+    tree = etree.ElementTree(parsed_html)
+    data = []
+    for input_elem in input_elements:
+        context = ""
+        label_text = ""
+        # Try to find an associated <label> using the 'for' attribute
+        if 'id' in input_elem.attrib:
+            input_id = input_elem.attrib['id']
+            label_elem = parsed_html.xpath(f'//label[@for="{input_id}"]')
+            if label_elem:
+                label_text = label_elem[0].text_content().strip()
+        
+        # If the <input> is a direct child of a <label>
+        parent = input_elem.getparent()
+        if parent.tag == 'label':
+            # Use the text content of the <label> as context, but exclude the <input> itself
+            label_text = parent.text_content().replace(html.tostring(input_elem, encoding="unicode").strip(), "").strip()
+        
+        # If no label or context was found, gather surrounding text and inline elements
+        if not context:
+            # Gather preceding inline elements and text
+            sibling = input_elem.getprevious()
+            while sibling is not None and sibling.tag not in ('input', 'div', 'label', 'form', 'table', 'ul', 'ol'):
+                context = sibling.text_content() + context
+                sibling = sibling.getprevious()
+            
+            # Gather following inline elements and text
+            sibling = input_elem.getnext()
+            while sibling is not None and sibling.tag not in ('input', 'div', 'label', 'form', 'table', 'ul', 'ol'):
+                context += sibling.text_content()
+                sibling = sibling.getnext()
+        data_item = dict(input_elem.attrib)
+        data_item["context"] = context
+        data_item["label"] = label_text
+        data_item["xpath"] = tree.getpath(input_elem)
+        data.append(data_item)
+        print("Context:", context)
+        print("Input:", html.tostring(input_elem, encoding="unicode").strip())
+        print('---')
+    return data
+
+
 def html_parsing(html_content):
 
     page = lxml.html.fromstring(html_content)
     result = parsing_page(page)
     return result
 
+def html_parsing_simple(html_content):
+    page = lxml.html.fromstring(html_content)
+    data = print_input_with_context(page)
+    return data
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parsing html page to extract form fields.")
     parser.add_argument("--html", type=str, help="The input html file.")
+    parser.add_argument("--method", type=str, help="The input html file.")
     parser.add_argument("--output", type=str, help="The output file.")
     
 
     args = parser.parse_args()
     
-    html_content = load_html(args.html)
-    
-    result = html_parsing(html_content)
-    
-    serialize_dictionary(result, args.output)
+    if args.method == 'simple':
+        html_content = load_html(args.html)
+        json_data = html_parsing_simple(html_content)
+        with open(args.output, 'w') as file:
+            file.write(json_data)
+    else:
+        html_content = load_html(args.html)
+        
+        result = html_parsing(html_content)
+        
+        serialize_dictionary(result, args.output)
 
     
 

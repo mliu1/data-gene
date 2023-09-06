@@ -1,11 +1,8 @@
 import json
 import argparse
 import requests
+from .utils import load_json_from_file
 
-def load_json_from_file(file_path):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        json_data = json.load(file)
-    return json_data
 
 def upload_json(hash_string, json_string):
     r = requests.post('https://form-fill-mongodb.vercel.app/api/html/selection', json={
