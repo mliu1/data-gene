@@ -1,6 +1,21 @@
 import subprocess
 import argparse
 import json
+from lib.utils import load_json_from_file
+
+def get_hashes():
+    response = requests.get("https://form-fill-mongodb.vercel.app/api/html?hash=11")
+    response.raise_for_status()  # Ensure the request was successful
+    return response.json()  # Assuming the endpoint returns a JSON list of hashes
+
+def string_to_8char_hex(input_string):
+    # Hash the input string using SHA-256
+    sha256 = hashlib.sha256()
+    sha256.update(input_string.encode())
+    hex_string = sha256.hexdigest()
+    
+    # Return the first 8 characters of the hex string
+    return hex_string[:8]
 
 def run_command(command: str):
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
@@ -8,36 +23,41 @@ def run_command(command: str):
     return process.communicate()[0].decode()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run the entire pipeline.")
-    parser.add_argument("--hashes", type=str, help="The file has all the hashes for processing")
-    
+
+    parser = argparse.ArgumentParser(description="Parsing html page to extract form fields.")
+    parser.add_argument("--mode", type=str, default = 'matching', help="The input folder.")
+
     args = parser.parse_args()
-    file_name = args.hashes
-    my_file = open(file_name, 'r')
+    mode = args.mode
 
-    #read text file into list 
-    hashes = my_file.read()
+    if mode == "download":
+        # 1. Run download.py with the hash
+        subprocess.run(["python3", "lib/download.py", "--hash", hash_string, "--output", "ouput_"+string_to_8char_hex(hash_string)+".html"], check=True)
 
-    # Step 0: START
-    print('---START---')
-    for hash_string in hashes:
+    if mode == "upload":
+        # 4. Run upload.py with the current hash
+        subprocess.run(["python3.11", "lib/upload.py", "--hash", hash_string, "--input", "template/ouput_"+string_to_8char_hex(hash_string)+".json"], check=True)  
 
-        # Step 1: Run download.py
-        print('---Download---' + hash_string)
-        run_command(f"python3 download.py --hash {hash_string}")
+    if mode == "matching":
+        try:
+            # 1. Scan all html generate unique tokens
+            subprocess.run(["python3.11", "run.py", "--mode", "indexing", "--input", "data/", "--output", "inverted_index.pkl"], check=True)
 
-        # Step 2: Run parsing.py
-        print('---Parsing---')
-        run_command("python3 parsing.py --html ./output.html --output output.pickle")
+            # 2. Filter html tokens and generate token embedding vectors
+            subprocess.run(["python3.11", "run.py", "--mode", "parsing", "--input",  "inverted_index.pkl", "--output", "embedding.pkl"], check=True)
 
-        # Step 3: Run matching.py
-        print('---Matching---')
-        run_command("python3 matching.py --formfields output.pickle --output form.json")
+            # 3. Process knowledge data to generate label embedding vectors
+            subprocess.run(["python3.11", "run.py", "--mode", "processdata", "--output", "data.pkl"], check=True)
 
-        # Step 4: Run upload.py
-        print('---Upload---' + hash_string)
-        run_command(f"python3 upload.py --hash {hash_string}")
+            # 4. Generate label for all input tokens from htmls
+            subprocess.run(["python3.11", "run.py", "--mode", "labeling", "--input",  "embedding.pkl", "--output", "label.pkl"], check=True)
+        
+            # 5. Process htmls and generate the form templates
+            subprocess.run(["python3.11", "run.py", "--mode", "matching", "--input",  "data/", "--label", "label.pkl", "--output", "template/"], check=True)
+        
+            print(f"Pipeline successfully executed for debug/")
 
-    # Step 5: END
-    print('---END---')
+        except subprocess.CalledProcessError as e:
+            print(f"Pipeline failed for hash with error: {str(e)}")
 
+    
