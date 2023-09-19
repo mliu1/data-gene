@@ -1,6 +1,7 @@
 from lxml import html
-import requests
 import json
+import pickle
+import requests
 
 
 def load_json_from_file(file_path):

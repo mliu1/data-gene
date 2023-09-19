@@ -2,12 +2,14 @@ import os
 import re
 import time
 import json
+import nltk
 import pickle
 import openai
 import argparse
 import numpy as np
 from bs4 import BeautifulSoup
-
+from nltk.tokenize import word_tokenize
+    
 data = {
     "firstName": ["first name", "legal first name", "firstName"],
     "middleName": ["Middle Name", "Middle Initial", "middle initial (optional)", "middleName"],
@@ -123,6 +125,11 @@ def load_html_files_from_directory(directory_path):
     
     return html_contents
 
+def nltk_tokenize(input_string):
+    tokens_nltk = word_tokenize(input_string.lower())
+    tokens_nltk = [token for token in tokens_nltk if not no_alphanumeric_string(token)]
+    return ' '.join(tokens_nltk)
+
 def no_alphanumeric_string(s):
     return bool(re.match(r'^[^\w]', s))
 
@@ -204,11 +211,12 @@ def get_label_for_inputs(non_hidden_inputs, soup, label_dict):
         foundLabel = False
         if input_elem.get('name'):
             s =  input_elem.get('name').lower()
-            if s.lower() in label_dict:
-                label_text = label_dict[s.lower()][0] #label category
-                label_conf = label_dict[s.lower()][1] #confidence score
+            s = nltk_tokenize(s)
+            if s in label_dict:
+                label_text = label_dict[s][0] #label category
+                label_conf = label_dict[s][1] #confidence score
                 foundLabel = True
-            print(f"name is {s}, found label {foundLabel}")
+            #print(f"name is {s}, found label {foundLabel}")
             
         if not foundLabel:
             # Find associated label using 'for' attribute
@@ -222,13 +230,17 @@ def get_label_for_inputs(non_hidden_inputs, soup, label_dict):
                 #print(associated_label)
                 
                 for s in associated_label.stripped_strings:
-                    if s.lower() in label_dict:
-                        label_text = label_dict[s.lower()][0] #label category
-                        label_conf = round(label_dict[s.lower()][1],2 )#confidence score
+                    token = nltk_tokenize(s)
+                    #print(f'normalized to {token}')
+                    if token in label_dict:
+                        print(f'{token} is matched to {label_dict[token]}')
+                        label_text = label_dict[token][0] #label category
+                        label_conf = round(label_dict[token][1], 2)#confidence score
                         foundLabel = True
                         break
-                    print(f"label is {s}, found label {foundLabel}")
-                    
+                    #print(f"label is {s}, found label {foundLabel}")
+    
+        #print(f'label is {label_text}') 
         #if 'id' in input_elem:
         if input_elem.get('id'):
             elem_id = input_elem.get('id')
@@ -410,8 +422,8 @@ if __name__ == "__main__":
         for item in sorted_items:
             key = item[0]
             value = item[1]
-            key = remove_trailing_non_alnum_regex(key)
-            if no_alphanumeric_string(key)  or len(key) >= 90 or len(key) <= 1:
+            key = nltk_tokenize(key)
+            if len(key) >= 90 or len(key) <= 1:
                 continue
             input_tokens.append(key)
         

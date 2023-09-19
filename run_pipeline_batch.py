@@ -1,6 +1,9 @@
-import subprocess
-import argparse
 import json
+import time
+import hashlib
+import argparse
+import requests
+import subprocess
 from lib.utils import load_json_from_file
 
 def get_hashes():
@@ -31,13 +34,18 @@ if __name__ == "__main__":
     mode = args.mode
 
     if mode == "download":
-        # 1. Run download.py with the hash
-        subprocess.run(["python3", "lib/download.py", "--hash", hash_string, "--output", "ouput_"+string_to_8char_hex(hash_string)+".html"], check=True)
+        hashes = get_hashes()
+        for hash_string in hashes:
+            # 1. Run download.py with the hash
+            subprocess.run(["python3", "lib/download.py", "--hash", hash_string, "--output", "ouput_"+string_to_8char_hex(hash_string)+".html"], check=True)
 
     if mode == "upload":
-        # 4. Run upload.py with the current hash
-        subprocess.run(["python3.11", "lib/upload.py", "--hash", hash_string, "--input", "template/ouput_"+string_to_8char_hex(hash_string)+".json"], check=True)  
-
+        hashes = get_hashes()
+        for hash_string in hashes:
+            # 4. Run upload.py with the current hash
+            subprocess.run(["python3.11", "lib/upload.py", "--hash", hash_string, "--input", "template/ouput_"+string_to_8char_hex(hash_string)+".json"], check=True)  
+            time.sleep(2)
+            
     if mode == "matching":
         try:
             # 1. Scan all html generate unique tokens
