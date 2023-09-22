@@ -5,13 +5,14 @@ import re
 import sys
 import time
 import logging
+from bs4 import BeautifulSoup
 from collections import defaultdict
 from io import StringIO
 from lxml import etree, html
 from json import loads, dumps
 from ast import literal_eval
 import pickle
-from .utils import serialize_dictionary
+from lib.utils import serialize_dictionary
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -27,7 +28,7 @@ def print_elements(element, indent=0):
         print_elements(child, indent + 2)
 
 def load_html(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding="utf-8") as file:
         html_content = file.read()
     return html_content
 
@@ -391,6 +392,48 @@ def parsing_page(page):
 
     return result
     
+def print_input_with_context_soup(soup):
+    all_texts = list(soup.stripped_strings)
+    print(all_texts)
+    exit(1)
+    non_hidden_inputs = soup.find_all(lambda tag: (isinstance(tag, type(soup.new_tag("test"))) and 
+                                              tag.name == 'input' and 
+                                              tag.get('type') != 'hidden'))
+    data = []
+    for input_elem in non_hidden_inputs:
+        
+        label_text = ""
+        # Find associated label using 'for' attribute
+        associated_label = soup.find('label', {'for': input_elem.get('id')})
+        
+        # If input is a child of label, the parent is the associated label
+        if not associated_label and input_elem.find_parent('label'):
+            associated_label = input_elem.find_parent('label')
+        
+        if associated_label:
+            label_text = associated_label.get_text(separator=' ', strip=True)
+
+        context = ""
+        # Gather preceding inline elements and text
+        sibling = input_elem.find_previous_sibling()
+        while sibling is not None and sibling.name not in ('input', 'div', 'label', 'form', 'table', 'ul', 'ol'):
+            context = sibling.get_text(separator=' ', strip=True) + context
+            sibling = sibling.find_previous_sibling()
+
+        # Gather following inline elements and text
+        sibling = input_elem.find_next_sibling()
+        while sibling is not None and sibling.name not in ('input', 'div', 'label', 'form', 'table', 'ul', 'ol'):
+            context += sibling.get_text(separator=' ', strip=True)
+            sibling = sibling.find_next_sibling()
+
+        data_item = dict(input_elem.attrs)
+        data_item["context"] = context
+        data_item["label"] = label_text
+        data_item["xpath"] = ""
+        data.append(data_item)
+
+    return data
+
 
 def print_input_with_context(parsed_html):
     # Find all <input> elements
@@ -439,19 +482,32 @@ def print_input_with_context(parsed_html):
 
 def html_parsing(html_content):
 
-    page = lxml.html.fromstring(html_content)
-    result = parsing_page(page)
-    return result
+    # Attempt to parse the content using lxml
+    try:
+        #page = etree.fromstring(html_content, etree.HTMLParser())
+        page = lxml.html.fromstring(html_content)
+        print(page)
+        parsing_success = True
+        print(page)
+        result = parsing_page(page)
+        return result
+    except etree.ParserError as e:
+        error_message = str(e)
+        print(error_message)
+        parsing_success = False
+        return None
 
 def html_parsing_simple(html_content):
-    page = lxml.html.fromstring(html_content)
-    data = print_input_with_context(page)
-    return data
+    page = BeautifulSoup(html_content, 'html.parser')
+    
+    data = print_input_with_context_soup(page)
+    json_data = dumps(data)
+    return json_data
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parsing html page to extract form fields.")
     parser.add_argument("--html", type=str, help="The input html file.")
-    parser.add_argument("--method", type=str, help="The input html file.")
+    parser.add_argument("--method", type=str, default="simple", help="The pii data json file.")
     parser.add_argument("--output", type=str, help="The output file.")
     
 

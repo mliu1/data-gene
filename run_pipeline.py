@@ -15,19 +15,19 @@ if __name__ == "__main__":
 
     # Step 1: Run download.py
     print('---Download---')
-    run_command(f"python3 download.py --hash {args.hash}")
+    run_command(f"python3 lib/download.py --hash {args.hash}")
 
     # Step 2: Run parsing.py
     print('---Parsing---')
-    run_command("python3 parsing.py --html ./output.html --output output.pickle")
+    run_command("python3 lib/parsing.py --html ./output.html --output output.json")
 
     # Step 3: Run matching.py
     print('---Matching---')
-    run_command("python3 matching.py --formfields output.pickle --output form.json")
+    run_command("python3 lib/matching.py --formfields output.json --output form.json")
 
     # Step 4: Run upload.py
     print('---Upload---')
-    run_command(f"python3 upload.py --hash {args.hash}")
+    run_command(f"python3 lib/upload.py --hash {args.hash}")
 
     # Step 5: END
     print('---END---')

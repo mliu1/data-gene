@@ -9,6 +9,9 @@ import argparse
 import numpy as np
 from bs4 import BeautifulSoup
 from nltk.tokenize import word_tokenize
+from lib.upload import upload_json
+from lib.download import fetch_html_content,fetch_hashes
+from lib.matching import cosine_similarity_matrix,load_html_files_from_directory,get_embedding,get_inverted_index,get_all_inputs,get_label_for_inputs
     
 data = {
     "firstName": ["first name", "legal first name", "firstName"],
@@ -100,231 +103,7 @@ data = {
     "residency status": ["US citizen", "Green card (Permanent Resident)", "Foreign (Non-resident)"],
 }
 
-def cosine_similarity_matrix(embeddings1, embeddings2):
-    # Normalize the embeddings
-    embeddings1_normalized = embeddings1 / np.linalg.norm(embeddings1, axis=1, keepdims=True)
-    embeddings2_normalized = embeddings2 / np.linalg.norm(embeddings2, axis=1, keepdims=True)
-    
-    # Compute the similarity matrix
-    similarity = np.dot(embeddings1_normalized, embeddings2_normalized.T)
-    
-    return similarity
 
-def load_html_files_from_directory(directory_path):
-    # List all files in the directory
-    all_files = [f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f))]
-    
-    # Filter for .html files
-    html_files = [f for f in all_files if f.endswith('.html')]
-    
-    # Load each HTML file into memory
-    html_contents = {}
-    for html_file in html_files:
-        with open(os.path.join(directory_path, html_file), 'r', encoding='utf-8') as file:
-            html_contents[html_file] = file.read()
-    
-    return html_contents
-
-def nltk_tokenize(input_string):
-    tokens_nltk = word_tokenize(input_string.lower())
-    tokens_nltk = [token for token in tokens_nltk if not no_alphanumeric_string(token)]
-    return ' '.join(tokens_nltk)
-
-def no_alphanumeric_string(s):
-    return bool(re.match(r'^[^\w]', s))
-
-def remove_trailing_non_alnum_regex(s):
-    return re.sub(r'[^a-zA-Z0-9]*$', '', s)
-
-def generate_xpath(element):
-    path_parts = []
-    current = element
-    while current is not None and current.name is not None and current.parent is not None:
-        siblings = list(current.parent.children)
-        tag_siblings = [sibling for sibling in siblings if sibling.name == current.name]
-        if len(tag_siblings) > 1:
-            index = tag_siblings.index(current) + 1  # XPath is 1-indexed
-            path_parts.append(f"{current.name}[{index}]")
-        else:
-            path_parts.append(current.name)
-        current = current.parent
-    return '/' + '/'.join(reversed(path_parts))
-
-def get_inverted_index(html_data):
-    inverted = dict()
-    for filename, content in html_data.items():
-        print(f"Contents of {filename}:")
-        #print(content)
-        page = BeautifulSoup(content, 'html.parser')
-        vocab = set()
-        # Extracting text strings for all elements in the soup
-        for s in page.stripped_strings:
-            vocab.add(s.lower())
-        
-        # Extracting the 'name' attributes for all elements in the soup
-        element_name_attributes = [tag['name'] for tag in page.find_all() if tag.has_attr('name')]
-        for s in element_name_attributes:
-            vocab.add(s.lower())
-
-        #print(vocab)
-        for v in vocab:
-            if v not in inverted:
-                inverted[v] = [filename]
-            else:
-                inverted[v].append(filename)
-    return inverted
-
-def scan_for_inputs(html_data, label_dict, output_folder):
-    for filename, content in html_data.items():
-        print(f"Contents of {filename}:")
-        #print(content)
-        soup, inputs = get_all_inputs(content)
-        data = get_label_for_inputs(inputs, soup, label_dict)
-        json_output = output_folder + '/' + filename[:-5] + ".json"
-        with open(json_output, 'w') as json_file:
-            json.dump(data, json_file)
-
-
-def get_all_inputs(html_content):
-    soup = BeautifulSoup(html_content, 'html.parser')
-    inputs  = soup.find_all('input')
-    selects = soup.find_all('select')
-    textareas = soup.find_all('textarea')
-    radios = soup.find_all(attrs={'role': 'radio'})
-    checkboxes = soup.find_all(attrs={'role': 'checkbox'})
-    submit_buttons = soup.find_all(attrs={'role': 'submit'})
-    radiogroups = soup.find_all(attrs={'role': 'radiogroup'})
-    input_elements = inputs + selects + textareas + radiogroups + radios + checkboxes + submit_buttons
-    return soup, input_elements
-
-def get_label_for_inputs(non_hidden_inputs, soup, label_dict):
-    
-    data = []
-    for input_elem in non_hidden_inputs:
-        
-        elem_id = ""
-        elem_type = ""
-        label_text = ""
-        label_conf = 0.0
-
-        #if we can find a good match using name, skip
-        foundLabel = False
-        if input_elem.get('name'):
-            s =  input_elem.get('name').lower()
-            s = nltk_tokenize(s)
-            if s in label_dict:
-                label_text = label_dict[s][0] #label category
-                label_conf = label_dict[s][1] #confidence score
-                foundLabel = True
-            #print(f"name is {s}, found label {foundLabel}")
-            
-        if not foundLabel:
-            # Find associated label using 'for' attribute
-            associated_label = soup.find('label', {'for': input_elem.get('id')})
-            
-            # If input is a child of label, the parent is the associated label
-            if not associated_label and input_elem.find_parent('label'):
-                associated_label = input_elem.find_parent('label')
-            
-            if associated_label:
-                #print(associated_label)
-                
-                for s in associated_label.stripped_strings:
-                    token = nltk_tokenize(s)
-                    #print(f'normalized to {token}')
-                    if token in label_dict:
-                        print(f'{token} is matched to {label_dict[token]}')
-                        label_text = label_dict[token][0] #label category
-                        label_conf = round(label_dict[token][1], 2)#confidence score
-                        foundLabel = True
-                        break
-                    #print(f"label is {s}, found label {foundLabel}")
-    
-        #print(f'label is {label_text}') 
-        #if 'id' in input_elem:
-        if input_elem.get('id'):
-            elem_id = input_elem.get('id')
-        
-        if input_elem.get('type'):
-            elem_type = input_elem.get('type')
-
-        xpath = generate_xpath(input_elem)
-        data_item = (elem_id, xpath, label_text, label_conf, elem_type)
-        data.append(data_item)
-
-    return data
-
-def chunk_list(input_list, chunk_size):
-    return [input_list[i:i + chunk_size] for i in range(0, len(input_list), chunk_size)]
-
-def get_embedding(input_tokens):
-    print(input_tokens)
-    token_embedding = dict()
-    sub_tokens_list = chunk_list(input_tokens, 20)
-    for sub_tokens in sub_tokens_list:
-        print(sub_tokens)
-        resp = openai.Embedding.create(
-                input=sub_tokens,
-                engine="text-embedding-ada-002")
-        for i in range(len(sub_tokens)):
-            token_embedding[sub_tokens[i]] = resp['data'][i]['embedding']
-        print(sub_tokens)
-    return token_embedding
-
-
-def process_htmls_for_inputs(html_data, token_label, label_category):
-    
-    for filename, content in html_data.items():
-        print(f"Contents of {filename}:")
-        get_input_with_context_soup(html_content, token_label, label_category)
-
-        is_desired_input = lambda tag: (tag.name == 'input' and 
-                                tag.get('type') not in ['checkbox', 'radio', 'submit', 'hidden'])
-
-        #print(content)
-        soup = BeautifulSoup(content, 'html.parser')
-        desired_inputs = soup.find_all(is_desired_input)
-        selects = soup.find_all('select')
-        checkboxes = soup.find_all('input', type='checkbox')
-        radio_buttons = soup.find_all('input', type='radio')
-        submit_buttons = soup.find_all('input', type='submit')
-        textareas = soup.find_all('textarea')
-
-
-    data = []
-    for input_elem in non_hidden_inputs:
-        
-        label_text = ""
-        # Find associated label using 'for' attribute
-        associated_label = soup.find('label', {'for': input_elem.get('id')})
-        
-        # If input is a child of label, the parent is the associated label
-        if not associated_label and input_elem.find_parent('label'):
-            associated_label = input_elem.find_parent('label')
-        
-        if associated_label:
-            label_text = associated_label.get_text(separator=' ', strip=True)
-
-        context = ""
-        # Gather preceding inline elements and text
-        sibling = input_elem.find_previous_sibling()
-        while sibling is not None and sibling.name not in ('input', 'div', 'label', 'form', 'table', 'ul', 'ol'):
-            context = sibling.get_text(separator=' ', strip=True) + context
-            sibling = sibling.find_previous_sibling()
-
-        # Gather following inline elements and text
-        sibling = input_elem.find_next_sibling()
-        while sibling is not None and sibling.name not in ('input', 'div', 'label', 'form', 'table', 'ul', 'ol'):
-            context += sibling.get_text(separator=' ', strip=True)
-            sibling = sibling.find_next_sibling()
-
-        data_item = dict(input_elem.attrs)
-        data_item["context"] = context
-        data_item["label"] = label_text
-        data_item["xpath"] = ""
-        data.append(data_item)
-
-    return data
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parsing html page to extract form fields.")
@@ -438,4 +217,16 @@ if __name__ == "__main__":
         inverted = get_inverted_index(html_data)
         with open(output_file, 'wb') as f:
             pickle.dump(inverted, f)
-    
+
+    if mode == "online":
+        url_base = 'https://form-fill-mongodb.vercel.app/api/html/find?hash='
+        hash_string = args.input
+        label_file = args.label
+        with open(label_file, "rb") as f:
+            label_dict = pickle.load(f)
+            html_content = fetch_html_content(url_base, hash_string)
+            soup, inputs = get_all_inputs(html_content)
+            data = get_label_for_inputs(inputs, soup, label_dict)
+            json_string = json.dumps(data)
+            print(json_string)
+            upload_json(hash_string, json_string)

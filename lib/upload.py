@@ -1,7 +1,7 @@
 import json
 import argparse
 import requests
-from utils import load_json_from_file
+from lib.utils import load_json_from_file
 
 
 def upload_json(hash_string, json_string):
