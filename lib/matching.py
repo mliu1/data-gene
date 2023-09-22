@@ -11,11 +11,13 @@ from collections import defaultdict
 import openai
 import numpy as np
 from bs4 import BeautifulSoup
-from nltk.tokenize import word_tokenize
 from lib.utils import deserialize_dictionary  #TODO: fix the module import from parsing.py
 from lib.utils import load_json_from_file
 import ast
 
+import nltk
+nltk.data.path.append('./nltk_data/')
+from nltk.tokenize import word_tokenize
 
 # Configure logging
 logging.basicConfig(
