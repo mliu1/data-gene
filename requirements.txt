@@ -3,3 +3,4 @@ webdriver-manager==3.8.6
 pyyaml==6.0
 openai
 lxml==4.9.2
+beautifulsoup4
