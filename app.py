@@ -20,6 +20,7 @@ if 'update' in params:
     for hash_string in hashes:
         html_content = fetch_html_content(url, hash_string)
         if (len(html_content) > 0):
+            url_base = 'https://form-fill-mongodb.vercel.app/api/html/find?hash='
             html_content = fetch_html_content(url_base, hash_string)
             soup, inputs = get_all_inputs(html_content)
             data = get_label_for_inputs(inputs, soup, label_dict)
