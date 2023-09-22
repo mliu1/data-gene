@@ -15,7 +15,7 @@ if 'update' in params:
     url = 'https://form-fill-mongodb.vercel.app/api/html/hash'
     hashes = get_new_hashes()
     label_dict = {}
-    with open(label_file, "rb") as f:
+    with open("label.pkl", "rb") as f:
         label_dict = pickle.load(f)
     for hash_string in hashes:
         html_content = fetch_html_content(url, hash_string)
@@ -31,7 +31,7 @@ if 'batch' in params:
     url_base = 'https://form-fill-mongodb.vercel.app/api/html/find?hash='
     hashes = get_all_hashes()
     label_dict = {}
-    with open(label_file, "rb") as f:
+    with open("label.pkl", "rb") as f:
         label_dict = pickle.load(f)
     for hash_string in hashes:
         html_content = fetch_html_content(url, hash_string)
