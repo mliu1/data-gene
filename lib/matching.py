@@ -247,6 +247,41 @@ def get_all_inputs(html_content):
     input_elements = inputs + selects + textareas + radiogroups + radios + checkboxes + submit_buttons
     return soup, input_elements
 
+def get_label_for_fields(fields, label_dict):
+    data = []
+    for field in fields:
+        elem_id = ""
+        elem_type = ""
+        label_text = ""
+        label_conf = 0.0
+        #if we can find a good match using name, skip
+        foundLabel = False
+        if field.get('htmlName'):
+            s =  field.get('htmlName').lower()
+            s = nltk_tokenize(s)
+            if s in label_dict:
+                label_text = label_dict[s][0] #label category
+                label_conf = label_dict[s][1] #confidence score
+                foundLabel = True
+        if not foundLabel:
+            if field.get('label-tag'):
+                s =  field.get('label-tag').lower()
+                s = nltk_tokenize(s)
+                if s in label_dict:
+                    label_text = label_dict[s][0] #label category
+                    label_conf = label_dict[s][1] #confidence score
+                    foundLabel = True
+        if field.get('htmlID'):
+            elem_id = "#"+field.get('htmlID')
+        
+        if field.get('type'):
+            elem_type = field.get('type')
+
+        xpath = 'elementNumber:'+str(field.get('elementNumber'))
+        data_item = (elem_id, xpath, label_text, label_conf, elem_type)
+        data.append(data_item)
+    return data
+
 def get_label_for_inputs(non_hidden_inputs, soup, label_dict):
     
     data = []

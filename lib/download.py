@@ -57,6 +57,19 @@ def fetch_html_content(url_base, hash_string):
         print("Failed to retrieve data. Status code:", response.status_code)
     return html_content
 
+def fetch_pageDetails(url_base, hash_string):
+    url = url_base + hash_string
+    response = requests.get(url)
+    fields = ""
+    if response.status_code == 200:
+        data = response.json()
+        content = data['pageDetails']
+        if len(content) > 0:
+            fields = content['fields']:
+    else:
+        print("Failed to retrieve data. Status code:", response.status_code)
+    return fields
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download HTML content by hash.")
     parser.add_argument("--hash", type=str, help="The hash string used in the URL.")
