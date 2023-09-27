@@ -247,6 +247,41 @@ def get_all_inputs(html_content):
     input_elements = inputs + selects + textareas + radiogroups + radios + checkboxes + submit_buttons
     return soup, input_elements
 
+def check_ground_truth(groundTruth, prediction):
+    target_dict = {}
+    for ele in groundTruth:
+        if len(ele[0]) > 1:
+            target_dict[ele[0]] = ele[2]
+    pred_dict = {}
+    for ele in prediction:
+        if len(ele[0]) > 1:
+            pred_dict[ele[0]] = ele[2]
+    #print(target_dict)
+    #print(pred_dict)
+    miss = 0
+    true_det = 0
+    false_det = 0
+    match_cat = {}
+    for key, value in target_dict.items():
+        if value != "no match":
+            if key not in pred_dict:
+                miss = miss + 1
+                match_cat[key] = "miss|" + value
+            else:
+                pred_label = pred_dict[key]
+                if pred_label == value:
+                    true_det = true_det + 1
+                    match_cat[key] = pred_label + "|" + value
+                else:
+                    false_det = false_det + 1
+        else:
+            if key in pred_dict:
+                pred_label = pred_dict[key]
+                if pred_label != "no match":
+                    false_det = false_det + 1
+                    match_cat[key] = pred_label + "|" + value
+    return true_det, false_det, miss, match_cat
+
 def get_label_for_fields(fields, label_dict):
     data = []
     for field in fields:

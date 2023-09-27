@@ -10,8 +10,8 @@ import numpy as np
 from bs4 import BeautifulSoup
 from nltk.tokenize import word_tokenize
 from lib.upload import upload_json
-from lib.download import fetch_html_content,fetch_hashes
-from lib.matching import cosine_similarity_matrix,load_html_files_from_directory,get_embedding,get_inverted_index,get_all_inputs,get_label_for_inputs
+from lib.download import fetch_html_content,fetch_hashes,fetch_lists
+from lib.matching import cosine_similarity_matrix,load_html_files_from_directory,get_embedding,get_inverted_index,get_all_inputs,get_label_for_inputs,check_ground_truth
     
 data = {
     "firstName": ["first name", "legal first name", "firstName"],
@@ -21,13 +21,13 @@ data = {
     "suffixValue": ["jr", "sr", "ii", "iii", "iv"],
     "taxIDType": ["Tax ID Type"],
     "itin": ["Individual Taxpayer Identification Number", "individual tax id", "itin"],
-    "ssn": ["Social Security Number", "Social Security", "ssn", "ssn or individual tax id", "social security number or individual taxpayer identification"],
+    "ssn": ["SSN/ITIN", "Social Security Number", "Social Security", "ssn", "ssn or individual tax id", "social security number or individual taxpayer identification"],
     "ssnFormat": ["xxx-xx-xxxx"],
     "dob": ["Date of Birth", "dateOfBirth" "dob", "date of birth (mm/dd/yyyy)"],
     "dateFormat": ["mm/dd/yyyy"],
     "mother MaidenName": ["Mother Maiden Name", "mother's maiden name"],
     "addressType": ["Address Type"],
-    "mailingAddressLine1": ["Mailing Address","Residence Address", "street address", "residential address", "Residential Address (P.O. Box is not valid)", "mailing address", "billing address"],
+    "mailingAddressLine1": ["Home or permanent address", "Mailing Address","Residence Address", "street address", "residential address", "Residential Address (P.O. Box is not valid)", "mailing address", "billing address"],
     "mailingAddressLine2": ["Apt/suite number", "Apt no", "suite no", "apt/suite (if applicable)", "suite/apt/other", "address line 2 (optional)"],
     "zip/postalCode": ["zipcode", "zip code", "zip", "postal Code", "postalCode"],
     "state/province/region": ["state", "province"],
@@ -217,6 +217,16 @@ if __name__ == "__main__":
         inverted = get_inverted_index(html_data)
         with open(output_file, 'wb') as f:
             pickle.dump(inverted, f)
+
+    if mode == "verify":
+        url_base = 'https://form-fill-mongodb.vercel.app/api/html/find?hash='
+        hash_string = args.input
+        targets = fetch_lists(url_base, hash_string, "prodSelection")
+        preds = fetch_lists(url_base, hash_string, "selection")
+        preds = json.loads(preds) #the raw output is a string object, convert it to list
+        true_det, false_det, missing_det, match_cat = check_ground_truth(targets, preds)
+        print(f"True detection: {true_det}, false detection: {false_det}, missing detection: {missing_det} ")
+        print(match_cat)
 
     if mode == "online":
         url_base = 'https://form-fill-mongodb.vercel.app/api/html/find?hash='

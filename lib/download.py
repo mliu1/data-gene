@@ -57,6 +57,18 @@ def fetch_html_content(url_base, hash_string):
         print("Failed to retrieve data. Status code:", response.status_code)
     return html_content
 
+
+def fetch_lists(url_base, hash_string, section):
+    url = url_base + hash_string
+    response = requests.get(url)
+    content = ""
+    if response.status_code == 200:
+        data = response.json()
+        content = data[section]
+    else:
+        print("Failed to retrieve data. Status code:", response.status_code)
+    return content
+
 def fetch_pageDetails(url_base, hash_string):
     url = url_base + hash_string
     response = requests.get(url)
