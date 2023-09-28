@@ -64,6 +64,7 @@ def fetch_lists(url_base, hash_string, section):
     content = ""
     if response.status_code == 200:
         data = response.json()
+        print(data.keys())
         content = data[section]
     else:
         print("Failed to retrieve data. Status code:", response.status_code)
@@ -77,7 +78,7 @@ def fetch_pageDetails(url_base, hash_string):
         data = response.json()
         content = data['pageDetails']
         if len(content) > 0:
-            fields = content['fields']
+            fields = content['visibleFields']
     else:
         print("Failed to retrieve data. Status code:", response.status_code)
     return fields

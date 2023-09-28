@@ -10,8 +10,8 @@ import numpy as np
 from bs4 import BeautifulSoup
 from nltk.tokenize import word_tokenize
 from lib.upload import upload_json
-from lib.download import fetch_html_content,fetch_hashes,fetch_lists
-from lib.matching import cosine_similarity_matrix,load_html_files_from_directory,get_embedding,get_inverted_index,get_all_inputs,get_label_for_inputs,check_ground_truth
+from lib.download import fetch_html_content,fetch_hashes,fetch_lists,fetch_pageDetails
+from lib.matching import cosine_similarity_matrix,load_html_files_from_directory,get_embedding,get_inverted_index,get_all_inputs,get_label_for_inputs,check_ground_truth,get_label_for_fields
     
 data = {
     "firstName": ["first name", "legal first name", "firstName"],
@@ -234,9 +234,11 @@ if __name__ == "__main__":
         label_file = args.label
         with open(label_file, "rb") as f:
             label_dict = pickle.load(f)
-            html_content = fetch_html_content(url_base, hash_string)
-            soup, inputs = get_all_inputs(html_content)
-            data = get_label_for_inputs(inputs, soup, label_dict)
+            #html_content = fetch_html_content(url_base, hash_string)
+            #soup, inputs = get_all_inputs(html_content)
+            #data = get_label_for_inputs(inputs, soup, label_dict)
+            fields = fetch_pageDetails(url_base, hash_string)
+            data = get_label_for_fields(fields, label_dict)
             json_string = json.dumps(data)
             print(json_string)
             upload_json(hash_string, json_string)
