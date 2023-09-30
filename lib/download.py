@@ -76,9 +76,9 @@ def fetch_pageDetails(url_base, hash_string):
     fields = ""
     if response.status_code == 200:
         data = response.json()
-        content = data['pageDetails']
+        content = data.get('pageDetails')
         if len(content) > 0:
-            fields = content['visibleFields']
+            fields = content.get('visibleFields')
     else:
         print("Failed to retrieve data. Status code:", response.status_code)
     return fields
