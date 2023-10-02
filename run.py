@@ -230,7 +230,6 @@ if __name__ == "__main__":
         hash_string = args.input
         targets = fetch_lists(url_base, hash_string, "prodSelection")
         preds = fetch_lists(url_base, hash_string, "selection")
-        preds = json.loads(preds) #the raw output is a string object, convert it to list
         true_det, false_det, missing_det, match_cat = check_ground_truth(targets, preds)
         print(f"True detection: {true_det}, false detection: {false_det}, missing detection: {missing_det} ")
         print(match_cat)
