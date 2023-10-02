@@ -104,6 +104,14 @@ Linkedin Profile: https://www.linkedin.com/in/abc/
 Personal Website: https://www.abc.com
 Visa Sponsorship: NO"""
 
+label_values_map = { "gender": ["male","female","other"],
+                         "veteranStatus": ["Veteran", "Not Veteran", "Other"],
+                         "visaSponsorship": ["Yes", "No"],
+                         "disabilityStatus": ["Yes", "No"], 
+                         # equalent to "residency status":["US citizen", "Green card (Permanent Resident)", "Foreign (Non-resident)"],
+                         "race": ["American Indian or Alaskan Native", "Asian", "Black or African American", "Hispanic or Latino", "White", "Native Hawaiian or Other Pacific Islander", "Two or More Races", "Decline To Self Identify"],
+                         "isHispanicLatino": ["Yes", "No"],
+}
 
 # input_string = """First Name: Xin
 # Middle Name: X
@@ -309,11 +317,22 @@ def get_label_for_fields(fields, label_dict):
         if field.get('htmlID'):
             elem_id = "#"+field.get('htmlID')
         
-        if field.get('type'):
-            elem_type = field.get('type')
+        if field.get('tagName'):
+            elem_type = field.get('tagName')
 
+        mappings = dict()
+        print(label_text)
+        if len(label_text) > 1 and field.get('tagName') == 'select':
+            options = field.get('options')
+            text_value_map = dict()
+            for op in options:
+                text_value_map[op.get("text")] = op.get("value")
+            form_option_texts = text_value_map.keys()
+            label_values = label_values_map[label_text]
+            result = classifier_function(label_text, label_values, form_option_texts)
+            mappings = result
         xpath = 'elementNumber:'+str(field.get('elementNumber'))
-        data_item = (elem_id, xpath, label_text, label_conf, elem_type)
+        data_item = (elem_id, xpath, label_text, label_conf, elem_type, mappings)
         data.append(data_item)
     return data
 
@@ -391,8 +410,8 @@ def get_embedding(input_tokens):
         print(sub_tokens)
     return token_embedding
 
-def classifier_function(item, targets, model = "gpt-4"):
-    messages = [{"role": "user", "content": f"You are now acting like classifier from a object specified by ```{item}``` on to one of predefined list specified in: ```{targets}```, meaning the response should be one of the element in ```{targets}```.\n\n Only respond with your `return` value. Do not include any other explanatory text in your response."}]
+def classifier_function(fieldName, sources, targets, model = "gpt-4"):
+    messages = [{"role": "user", "content": f"You are domain expert in data schema matching for {fieldName}, now you are acting like mapper function from a list specified by ```{sources}``` on to one of predefined list specified in: ```{targets}```, meaning the response should be one of the element in ```{targets}```.\n\n Only respond with your `return` value. Do not include any other explanatory text in your response."}]
 
     response = openai.ChatCompletion.create(
         model=model,
