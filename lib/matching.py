@@ -331,7 +331,7 @@ def get_label_for_fields(fields, label_dict):
             label_values = label_values_map[label_text]
             result = classifier_function(label_text, label_values, form_option_texts)
             mappings = result
-        xpath = 'elementNumber:'+str(field.get('elementNumber'))
+        xpath = field.get('htmlSelector')
         data_item = (elem_id, xpath, label_text, label_conf, elem_type, mappings)
         data.append(data_item)
     return data
@@ -411,7 +411,7 @@ def get_embedding(input_tokens):
     return token_embedding
 
 def classifier_function(fieldName, sources, targets, model = "gpt-4"):
-    messages = [{"role": "user", "content": f"You are domain expert in data schema matching for {fieldName}, now you are acting like mapper function from a list specified by ```{sources}``` on to one of predefined list specified in: ```{targets}```, meaning the response should be one of the element in ```{targets}```.\n\n Only respond with your `return` value. Do not include any other explanatory text in your response."}]
+    messages = [{"role": "user", "content": f"You are domain expert in data schema matching for {fieldName}, you are generating map between two value lists, do not generate python code! Now you are acting like mapper function from a list specified by ```{sources}``` on to one of predefined list specified in: ```{targets}```, meaning the response should be one of the element in ```{targets}```.\n\n Only respond with your `return` python dictionary object. Do not include any other explanatory text or python code in your response."}]
 
     response = openai.ChatCompletion.create(
         model=model,
