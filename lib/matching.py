@@ -106,9 +106,9 @@ Visa Sponsorship: NO"""
 
 label_values_map = { "gender": ["male","female","other"],
                          "veteranStatus": ["Veteran", "Not Veteran", "Other"],
-                         "visaSponsorship": ["Yes", "No"],
-                         "disabilityStatus": ["Yes", "No"], 
                          # equalent to "residency status":["US citizen", "Green card (Permanent Resident)", "Foreign (Non-resident)"],
+                         "disabilityStatus": ["Yes", "No"],
+                         "visaSponsorship": ["Yes", "No"],
                          "race": ["American Indian or Alaskan Native", "Asian", "Black or African American", "Hispanic or Latino", "White", "Native Hawaiian or Other Pacific Islander", "Two or More Races", "Decline To Self Identify"],
                          "isHispanicLatino": ["Yes", "No"],
 }
@@ -329,8 +329,8 @@ def get_label_for_fields(fields, label_dict):
                 text_value_map[op.get("text")] = op.get("value")
             form_option_texts = text_value_map.keys()
             label_values = label_values_map[label_text]
-            result = classifier_function(label_text, label_values, form_option_texts)
-            mappings = result
+            #result = classifier_function(label_text, label_values, form_option_texts)
+            #mappings = result
         xpath = field.get('htmlSelector')
         data_item = (elem_id, xpath, label_text, label_conf, elem_type, mappings)
         data.append(data_item)
