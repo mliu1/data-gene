@@ -104,13 +104,15 @@ Linkedin Profile: https://www.linkedin.com/in/abc/
 Personal Website: https://www.abc.com
 Visa Sponsorship: NO"""
 
-label_values_map = { "gender": ["male","female","other"],
-                         "veteranStatus": ["Veteran", "Not Veteran", "Other"],
+label_values_map = { 
+                         "veteranStatus": {"Filler":["please select"],"Veteran":["Veteran"], "Not Veteran":["Not Veteran"], "Other":["Other", "I don't want to declare"]},
+                         "gender": {"Filler":["please select"],"male":["male","m"],"female":["female","f"],"other":["other", "x", "don't want to specify", "decline to self identify"]},
+                         "visaSponsorship": {"Filler":["please select"],"Yes":["Yes"], "No":["No"]},
+                         "disabilityStatus": {"Filler":["please select"],"Yes":["Yes"], "No":["No"]},
+                         "isHispanicLatino": {"Filler":["please select"],"Yes":["Yes"], "No":["No"]},
                          # equalent to "residency status":["US citizen", "Green card (Permanent Resident)", "Foreign (Non-resident)"],
-                         "disabilityStatus": ["Yes", "No"],
-                         "visaSponsorship": ["Yes", "No"],
-                         "race": ["American Indian or Alaskan Native", "Asian", "Black or African American", "Hispanic or Latino", "White", "Native Hawaiian or Other Pacific Islander", "Two or More Races", "Decline To Self Identify"],
-                         "isHispanicLatino": ["Yes", "No"],
+                         "race": {"Filler":["please select"],"American Indian or Alaskan Native":["American Indian or Alaskan Native"], "Asian":["Asian"], "Black or African American":["Black or African American"], "Hispanic or Latino":["Hispanic or Latino"], "White":["White"], "Native Hawaiian or Other Pacific Islander":["Native Hawaiian or Other Pacific Islander"], "Two or More Races":["Two or More Races"], "Decline To Self Identify":["Decline To Self Identify"]},
+                         
 }
 
 # input_string = """First Name: Xin
@@ -193,6 +195,66 @@ def no_alphanumeric_string(s):
 
 def remove_trailing_non_alnum_regex(s):
     return re.sub(r'[^a-zA-Z0-9]*$', '', s)
+
+def map_select_values(name, label_values, form_texts, label_embedding):
+    
+    value_tokens = []
+    form_texts_list = []
+    for form_text in form_texts:
+        name_form_text = ' '.join([name.lower(), form_text.lower()])
+        value_tokens.append(name_form_text)
+        form_texts_list.append(form_text)
+    print(value_tokens)
+    openai_api_key = os.environ["OPENAI_API_KEY"]
+    resp = openai.Embedding.create(
+                input=value_tokens,
+                engine="text-embedding-ada-002")
+    value_token_embedding = dict()
+    for i in range(len(value_tokens)):
+        #"first name", embeddding vector
+        value_token_embedding[value_tokens[i]] = resp['data'][i]['embedding']
+
+    value_token_embedding_array_2d = []
+    value_token_labels = []
+    for k, v in value_token_embedding.items():
+        value_token_embedding_array_2d.append(v)
+        value_token_labels.append(k)
+    value_token_embedding_array_2d = np.vstack(value_token_embedding_array_2d)
+
+    synonym_label = []
+    synonym_label_tokens = []
+    label_synonym_embedding_array_2d = []
+    label_value_synoyms = label_values_map.get(name)
+    if label_value_synoyms:
+        for label in label_values:
+            synonyms = label_value_synoyms.get(label)
+            for synonym in synonyms:
+                name_value = ' '.join([name.lower(), synonym.lower()])
+                print(name_value)
+                synonym_label_tokens.append(name_value)
+                synonym_label.append(label)
+    print(synonym_label_tokens)
+    openai_api_key = os.environ["OPENAI_API_KEY"]
+    resp = openai.Embedding.create(
+                input=synonym_label_tokens,
+                engine="text-embedding-ada-002")
+    
+    for i in range(len(synonym_label_tokens)):
+        #"first name", embeddding vector
+        label_synonym_embedding_array_2d.append(resp['data'][i]['embedding'])
+    label_synonym_embedding_array_2d = np.vstack(label_synonym_embedding_array_2d)
+
+    simmatrix = cosine_similarity_matrix(value_token_embedding_array_2d, label_synonym_embedding_array_2d)
+    label_dict = dict()
+    for ind, value in enumerate(value_tokens):
+        name_value = ' '.join([name.lower(), value.lower()])
+        dot_products = simmatrix[ind,:]
+        max_index = np.argmax(dot_products)
+        max_similarity = dot_products[max_index]
+        print(f'{value} is mapped to {synonym_label[max_index]} with score: {max_similarity}')
+        #if max_similarity > .9: 
+        label_dict[synonym_label[max_index]] = (form_texts_list[ind], max_similarity)
+    return label_dict
 
 def generate_xpath(element):
     path_parts = []
@@ -290,7 +352,7 @@ def check_ground_truth(groundTruth, prediction):
                     match_cat[key] = pred_label + "|" + value
     return true_det, false_det, miss, match_cat
 
-def get_label_for_fields(fields, label_dict):
+def get_label_for_fields(fields, label_dict, label_embedding):
     data = []
     for field in fields:
         elem_id = ""
@@ -329,8 +391,8 @@ def get_label_for_fields(fields, label_dict):
                 text_value_map[op.get("text")] = op.get("value")
             form_option_texts = text_value_map.keys()
             label_values = label_values_map[label_text]
-            #result = classifier_function(label_text, label_values, form_option_texts)
-            #mappings = result
+            result = map_select_values(label_text, label_values, form_option_texts, label_embedding)
+            mappings = result
         xpath = field.get('htmlSelector')
         data_item = (elem_id, xpath, label_text, label_conf, elem_type, mappings)
         data.append(data_item)

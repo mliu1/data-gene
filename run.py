@@ -12,7 +12,18 @@ from nltk.tokenize import word_tokenize
 from lib.upload import upload_json
 from lib.download import fetch_html_content,fetch_hashes,fetch_lists,fetch_pageDetails
 from lib.matching import cosine_similarity_matrix,load_html_files_from_directory,get_embedding,get_inverted_index,get_all_inputs,get_label_for_inputs,check_ground_truth,get_label_for_fields
-    
+
+label_values_map = { 
+                         "veteranStatus": {"Veteran":["Veteran"], "Not Veteran":["Not Veteran"], "Other":["Other", "I don't want to declare"]},
+                         "gender": {"male":["male","m"],"female":["female","f"],"other":["other", "x", "don't want to specify"]},
+                         "visaSponsorship": {"Yes":["Yes"], "No":["No"]},
+                         "disabilityStatus": {"Yes":["Yes"], "No":["No"]},
+                         "isHispanicLatino": {"Yes":["Yes"], "No":["No"]},
+                         # equalent to "residency status":["US citizen", "Green card (Permanent Resident)", "Foreign (Non-resident)"],
+                         "race": {"American Indian or Alaskan Native":["American Indian or Alaskan Native"], "Asian":["Asian"], "Black or African American":["Black or African American"], "Hispanic or Latino":["Hispanic or Latino"], "White":["White"], "Native Hawaiian or Other Pacific Islander":["Native Hawaiian or Other Pacific Islander"], "Two or More Races":["Two or More Races"], "Decline To Self Identify":["Decline To Self Identify"]},
+                         
+}
+
 data = {
     "firstName": ["first name", "legal first name", "firstName"],
     "middleName": ["Middle Name", "Middle Initial", "middle initial (optional)", "middleName"],
@@ -133,7 +144,17 @@ if __name__ == "__main__":
                 print(v.lower())
                 token_label[v.lower()] = key
                 value_tokens.append(v.lower())
-        
+
+        for name, value_dict in label_values_map.items():
+            for value, synonyms in value_dict.items():
+                for synonym in synonyms:
+                    name_text = ' '.join([name.lower(), synonym.lower()])
+                    print(name_text)
+                    token_label[name_text] = value
+                    value_tokens.append(name_text)
+
+        value_tokens = list(set(value_tokens))
+
         openai_api_key = os.environ["OPENAI_API_KEY"]
         resp = openai.Embedding.create(
                 input=value_tokens,
@@ -142,6 +163,7 @@ if __name__ == "__main__":
         for i in range(len(value_tokens)):
             #"first name", embeddding vector
             value_token_embedding[value_tokens[i]] = resp['data'][i]['embedding']
+
 
         with open(output_file, 'wb') as f:
             pickle.dump((value_token_embedding, token_label), f)
@@ -237,6 +259,10 @@ if __name__ == "__main__":
     if mode == "online":
         url_base = 'https://form-fill-mongodb.vercel.app/api/html/find?hash='
         hash_string = args.input
+        label_example_embedding = dict()
+        example_label = []
+        with open("data.pkl", "rb") as f:
+            (label_example_embedding, example_label) = pickle.load(f)
         label_file = args.label
         with open(label_file, "rb") as f:
             label_dict = pickle.load(f)
@@ -244,7 +270,7 @@ if __name__ == "__main__":
             #soup, inputs = get_all_inputs(html_content)
             #data = get_label_for_inputs(inputs, soup, label_dict)
             fields = fetch_pageDetails(url_base, hash_string)
-            data = get_label_for_fields(fields, label_dict)
+            data = get_label_for_fields(fields, label_dict, label_example_embedding)
             json_string = json.dumps(data)
             print(json_string)
             upload_json(hash_string, json_string)
