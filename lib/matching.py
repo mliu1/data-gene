@@ -196,7 +196,7 @@ def no_alphanumeric_string(s):
 def remove_trailing_non_alnum_regex(s):
     return re.sub(r'[^a-zA-Z0-9]*$', '', s)
 
-def map_select_values(name, label_values, form_texts, label_embedding):
+def map_select_values(name, label_values, form_texts):
     
     value_tokens = []
     form_texts_list = []
