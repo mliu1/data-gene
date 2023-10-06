@@ -352,7 +352,7 @@ def check_ground_truth(groundTruth, prediction):
                     match_cat[key] = pred_label + "|" + value
     return true_det, false_det, miss, match_cat
 
-def get_label_for_fields(fields, label_dict, label_embedding):
+def get_label_for_fields(fields, label_dict):
     data = []
     for field in fields:
         elem_id = ""
@@ -391,7 +391,7 @@ def get_label_for_fields(fields, label_dict, label_embedding):
                 text_value_map[op.get("text")] = op.get("value")
             form_option_texts = text_value_map.keys()
             label_values = label_values_map[label_text]
-            result = map_select_values(label_text, label_values, form_option_texts, label_embedding)
+            result = map_select_values(label_text, label_values, form_option_texts)
             mappings = result
         xpath = field.get('htmlSelector')
         data_item = (elem_id, xpath, label_text, label_conf, elem_type, mappings)
